@@ -111,18 +111,24 @@ AprJenAnno$Provider = 'ONC_HALLO' # I think HALLO paid for JASCO's annotations
 ONC_anno = rbind(AprJenAnno[, c(colOut)], JasperAnno[,  c(colOut)])
 rm(list= c('JasperAnno', 'AprJenAnno'))
 
+
 ############################################################################
 # DFO Pilkington
 ############################################################################
 
 # No seconds in UTC
-#MOVE TO E DRIVE, MORE SPACE!!*
-PilkAnno1 = read.csv('D:\\DCLDE 2024/DFO_Pilkington/annotations/annot_H50bjRcb_SM_det.csv')
-PilkAnno2 = read.csv('D:\\DCLDE 2024/DFO_Pilkington/annotations/annot_KkHK0R2F_SM_det.csv')
+# 
+# PilkAnno1 = read.csv('D:\\DCLDE 2024/DFO_Pilkington/annotations/annot_H50bjRcb_SM_det.csv')
+# PilkAnno2 = read.csv('D:\\DCLDE 2024/DFO_Pilkington/annotations/annot_KkHK0R2F_SM_det.csv')
+
+PilkAnno1 = read.csv('E:\\DCLDE2026/DFO_Pilkington/annotations/annot_H50bjRcb_SM_det.csv')
+PilkAnno2 = read.csv('E:\\DCLDE2026/DFO_Pilkington/annotations/annot_KkHK0R2F_SM_det.csv')
+
+
 PilkAnno1$Dep='DFO_01'
 PilkAnno2$Dep='DFO_02'
 
-PilkAnno = rbind(PilkAnno1, PilkAnno1)
+PilkAnno = rbind(PilkAnno1, PilkAnno2)
 
 table(PilkAnno$sound_id_species)
 
@@ -131,37 +137,45 @@ PilkAnno <- PilkAnno %>%
   mutate(KW = as.numeric(grepl("KW", sound_id_species)),
          KW_certain = as.numeric(grepl("KW?", sound_id_species)))
 
-# Add Ecotype 
-PilkAnno$Ecotype = NaN
-PilkAnno$Ecotype[PilkAnno$kw_ecotype == 'SRKW'] ='SRKW'
-PilkAnno$Ecotype[PilkAnno$kw_ecotype == 'TKW'] ='BKW'
-PilkAnno$Ecotype[PilkAnno$kw_ecotype == 'OKW'] ='OKW'
-PilkAnno$Ecotype[PilkAnno$kw_ecotype == 'NRKW'] ='NRKW'
+# Add Ecotype- note uncertain ecotypes getting their own guess
+PilkAnno$Ecotype = as.factor(PilkAnno$kw_ecotype)
+levels(PilkAnno$Ecotype)<-c(NA, 'NRKW', 'NRKW', 'OKW', 'OKW', 'SRKW', 'SRKW',
+                            'BKW', 'BKW', NA)
 
+PilkAnno$Soundfile = PilkAnno$filename
+PilkAnno$FileBeginSec = PilkAnno$start
+PilkAnno$FileEndSec = PilkAnno$end
+PilkAnno$LowFreqHz = PilkAnno$freq_min
+PilkAnno$HighFreqHz = PilkAnno$freq_max
+PilkAnno$UTC = as.POSIXct(PilkAnno$utc, format="%Y-%m-%d %H:%M:%OS", tz = 'UTC')+
+  seconds(as.numeric(PilkAnno$utc_ms)/1000)
 
-colnames(PilkAnno)[c(1,3,4,5,6, 8,13)]<-c('Soundfile','FileBeginSec','FileEndSec',
-                                    'LowFreqHz','HighFreqHz','ClassSpecies', 'UTC')
-
-PilkAnno$Provider = 'DFO'
-DFO_anno = PilkAnno[, c(colOut)]
+PilkAnno$Provider = 'DFO_Pilkington'
+PilkAnno$ClassSpecies = PilkAnno$sound_id_species
 
 # Clean up the abiotic counds
-DFO_anno$ClassSpecies[
-  DFO_anno$ClassSpecies %in% c('Vessel Noise', 'Unknown', '', 'Mooring Noise', 
+PilkAnno$ClassSpecies[
+  PilkAnno$ClassSpecies %in% c('Vessel Noise', 'Unknown', '', 'Mooring Noise', 
                                'Chain?', 'ADCP', 'Anchor Noise', 'Clang',
                                'Vessel Noise?', 'Chain','No sound data',
                                "Blast/Breach", "Fishing Gear", "Breach",
                                'Rubbing')] = 'AB'
 
-DFO_anno$ClassSpecies[!DFO_anno$ClassSpecies %in% ClassSpeciesList] = 'UndBio'
+PilkAnno$ClassSpecies[!PilkAnno$ClassSpecies %in% ClassSpeciesList] = 'UndBio'
+
+DFO_Pilk = PilkAnno[, c(colOut)]
+
 rm(list= c('PilkAnno1', 'PilkAnno2', 'PilkAnno'))
+
+
+  
 
 
 ##############################################################################
 # JASCO- Malahat
 
 # Get a list of files matching the pattern 'annot_Malahat'
-file_list <- list.files(path = 'D:/DCLDE 2024/JASCO/annotations/', 
+file_list <- list.files(path = 'E:/DCLDE2026/JASCO/annotations/', 
                         pattern = 'annot_Malahat', full.names = TRUE)
 
 # Read and concatenate the CSV files
@@ -215,15 +229,55 @@ JASCO_malahat$Provider = 'JASCO_Malahat'
 
 JASCO_malahat = JASCO_malahat[,c(colOut)]
 
-#############################################################################
- 
-allAnno = rbind(DFO_anno, ONC_anno, JASCO_malahat)
 
 
-# Pull out the killer whale data
-KW_data = subset(allAnno, KW ==1)
+############################################################################
+# DFO Yerk
+############################################################################
 
-table(KW_data$Ecotype)
+# Get a list of files matching the pattern 'annot_Malahat'
+file_list <- list.files(path = 'E:\\DCLDE2026\\DFO_Yerk\\Audio_and_labels\\Annotations', 
+                        pattern = '*csv', full.names = TRUE)
+
+
+# Read and concatenate the CSV files with filename as a separate column (if non-empty)
+DFO_Yerk <- do.call(rbind, lapply(file_list, function(file) {
+  data <- read.csv(file)
+  if (nrow(data) > 0) {
+    data$Dep <- basename(file)  # Add filename as a new column
+    return(data)
+  } else {
+    return(NULL)  # Return NULL for empty data frames
+  }
+}))
+
+# Fucking PAMGuard
+DFO_Yerk = DFO_Yerk[DFO_Yerk$duration>0,]
+DFO_Yerk = DFO_Yerk[!duplicated(DFO_Yerk),]
+
+# Standardize formatting
+DFO_Yerk$Soundfile = DFO_Yerk$soundfile
+DFO_Yerk$LowFreqHz = DFO_Yerk$lf
+DFO_Yerk$HighFreqHz = DFO_Yerk$hf
+DFO_Yerk$UTC = as.POSIXct( DFO_Yerk$date_time_utc[1],  
+                           format="%Y-%m-%d %H:%M:%OS", tz = 'UTC')
+
+DFO_Yerk$FileBeginSec = DFO_Yerk$elapsed_time_seconds
+DFO_Yerk$FileEndSec = DFO_Yerk$FileBeginSec+DFO_Yerk$duration/1000
+
+DFO_Yerk$Ecotype = as.factor(DFO_Yerk$species)
+levels(DFO_Yerk$Ecotype)<-c(NA, 'NRKW', 'SRKW', 'BKW', NA, NA)
+
+DFO_Yerk$ClassSpecies = as.factor(DFO_Yerk$species)
+levels(DFO_Yerk$ClassSpecies)<-c('HW', 'KW', 'KW', 'KW', 'UndBio', 'AB')
+
+DFO_Yerk$KW_certain = ifelse(DFO_Yerk$ClassSpecies== 'KW', 1,0)
+DFO_Yerk$Provider = 'DFO_Yerk'
+
+# Apparently no uncertain calls
+DFO_Yerk$KW = DFO_Yerk$KW_certain
+
+DFO_Yerk = DFO_Yerk[, colOut]
 
 
 
@@ -234,21 +288,66 @@ table(KW_data$Ecotype)
 Viersanno = read.csv('E:\\DCLDE2026\\OrcaSound\\Meta/ModifiedAnnotations.csv')
 Viersanno$start_time_s = as.numeric(Viersanno$start_time_s) 
 
+Viersanno$DateTime <- with(Viersanno, paste(date, pst_or_master_tape_identifier))
+
 # Exclude round 1
 Viersanno = subset(Viersanno, dataset != 'podcast_round1')
 
-# Cut times wtih start == 0
-Viersanno= Viersanno[Viersanno$start_time_s>0,]
+Viersanno$UTC <- 
+  with(Viersanno, as.POSIXct(DateTime, tz = "America/Los_Angeles", 
+                             format = "%m/%d/%Y %H:%M:%S"))
+
+# Problem children
+problemData = unique(Viersanno$dataset[is.na(Viersanno$UTC)])
+problemIdx = which(is.na(Viersanno$UTC))
+  
+Viersanno$UTC[problemIdx] <- 
+  as.POSIXct(Viersanno$DateTime[problemIdx],
+             tz = "America/Los_Angeles", 
+             format = "%Y_%m_%d %H:%M:%S")
 
 
-pcaast.01 = subset(Viersanno, dataset =='podcast_round1')
-pcaast.02 = subset(Viersanno, dataset =='podcast_round2')
-pcaast.03 = subset(Viersanno, dataset =='podcast_round3')
-pcaast.05 = subset(Viersanno, dataset =='podcast_round5')
-pcaast.06 = subset(Viersanno, dataset =='podcast_round6')
-pcaast.07 = subset(Viersanno, dataset =='podcast_round7')
-pcaast.09 = subset(Viersanno, dataset =='podcast_round9')
-pcaast.10 = subset(Viersanno, dataset =='podcast_round10')
-pcaast.11 = subset(Viersanno, dataset =='podcast_round11')
-pcaast.12 = subset(Viersanno, dataset =='podcast_round12')
+Viersanno$ClassSpecies = Viersanno$Species
+Viersanno$ClassSpecies[Viersanno$ClassSpecies == 'Oo'] = 'KW'
+Viersanno$ClassSpecies[Viersanno$ClassSpecies == 'Noise'] = 'Ab'
+
+Viersanno$Provider = 'OrcaSound'
+Viersanno$KW = ifelse(Viersanno$ClassSpecies== 'KW',1,0)
+Viersanno$KW_certain = ifelse(Viersanno$ClassSpecies== 'KW',1,0)
+Viersanno$Dep = Viersanno$location
+Viersanno$Soundfile = Viersanno$wav_filename
+Viersanno$LowFreqHz =NaN
+Viersanno$HighFreqHz =NaN
+
+Viersanno$FileBeginSec = Viersanno$start_time_s
+Viersanno$FileEndSec = Viersanno$start_time_s+Viersanno$duration_s
+
+Viersanno = Viersanno[,c(colOut)]
+
+rm(list =c('problemData', 'problemIdx'))
+
+#############################################################################
+
+allAnno = rbind(DFO_Pilk, ONC_anno, JASCO_malahat, Viersanno, DFO_Yerk)
+# Pull out the killer whale data
+KW_data = subset(allAnno, KW ==1)
+
+table(KW_data$Ecotype)
+
+
+############################################################################
+# Ensure all files are present with their respective annoations
+
+
+# DFO Pilkington
+# Summary infomation
+audioDir = 'E:/DCLDE2026/DFO_Pilkington/'
+wav_files <- list.files(path = audioDir, pattern = "\\.flac$", recursive = TRUE,
+                        full.names = FALSE)
+num_wav_files <- length(wav_files)
+print(num_wav_files)
+
+DFO_anno$Soundfile[1] %in% wav_files
+
+
 
