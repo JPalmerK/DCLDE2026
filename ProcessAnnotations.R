@@ -74,7 +74,7 @@ AprJenAnno <- AprJenAnno %>%
 
 
 # Add Ecotype 
-AprJenAnno$Ecotype = NaN
+AprJenAnno$Ecotype = NA
 AprJenAnno$Ecotype[AprJenAnno$Comments == 'KWSR'] ='SRKW'
 AprJenAnno$Ecotype[AprJenAnno$Comments == 'KWT'] ='BKW'
 AprJenAnno$Ecotype[AprJenAnno$Comments == 'KWT?'] ='BKW'
@@ -180,8 +180,6 @@ rm(list= c('PilkAnno1', 'PilkAnno2', 'PilkAnno'))
 file_list <- list.files(path = 'E:/DCLDE2026/JASCO/annotations/', 
                         pattern = 'annot_Malahat', full.names = TRUE)
 
-# Read and concatenate the CSV files
-JASCO_malahat <- do.call(rbind, lapply(file_list, read.csv))
 
 # Read and concatenate the CSV files with filename as a separate column (if non-empty)
 JASCO_malahat <- do.call(rbind, lapply(file_list, function(file) {
@@ -207,7 +205,7 @@ JASCO_malahat$UTC = JASCO_malahat$UTC+
 
 
 # Add Ecotype 
-JASCO_malahat$Ecotype = NaN
+JASCO_malahat$Ecotype = NA
 JASCO_malahat$Ecotype[JASCO_malahat$kw_ecotype == 'SRKW'] ='SRKW'
 JASCO_malahat$Ecotype[JASCO_malahat$kw_ecotype == 'SRKW?'] ='BKW'
 JASCO_malahat$Ecotype[JASCO_malahat$kw_ecotype == 'KWT?'] ='BKW'
@@ -328,9 +326,59 @@ Viersanno = Viersanno[,c(colOut)]
 
 rm(list =c('problemData', 'problemIdx'))
 
+###########################################################################
+# SIMRES
+##########################################################################
+
+
+
+# Get a list of files matching the pattern 'annot_Malahat'
+file_list <- list.files(path = 'E:\\DCLDE2026\\SIMRES/annotations/', 
+                        pattern = '*txt', full.names = TRUE)
+
+
+# Read and concatenate the CSV files with filename as a separate column (if non-empty)
+SIMRES <- do.call(rbind, lapply(file_list, function(file) {
+  data <- read.table(file, header = TRUE, sep = '\t')
+  if (nrow(data) > 0) {
+    data$Dep <- basename(file)  # Add filename as a new column
+    return(data)
+  } else {
+    return(NULL)  # Return NULL for empty data frames
+  }
+}))
+
+SIMRES$ClassSpecies = as.factor(SIMRES$Sound.ID.Species)
+levels(SIMRES$ClassSpecies)<-c(NA, 'UndBio', 'KW', 'KW')
+SIMRES$KW_certain =  as.numeric(grepl("KW", SIMRES$Sound.ID.Species))
+
+#check SIMRES files in UTC
+SIMRES$UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z)_.*", "\\1", 
+                            SIMRES$Begin.File[1]),  
+                        format = "%Y%m%dT%H%M%S.%OSZ",
+                        tz = 'UTC')+seconds(SIMRES$File.Offset..s.)
+
+SIMRES$Ecotype = as.factor(SIMRES$KW.Ecotype)
+levels(SIMRES$Ecotype)<- c(NA, 'SRKW', 'SRKW')
+SIMRES$KW = ifelse(SIMRES$ClassSpecies == 'KW', 1,0)
+
+SIMRES$Soundfile = SIMRES$Begin.File
+SIMRES$Dep = 'Tekteksen'
+SIMRES$LowFreqHz = SIMRES$Low.Freq..Hz.
+SIMRES$HighFreqHz = SIMRES$Low.Freq..Hz.
+SIMRES$FileBeginSec = SIMRES$File.Offset..s.
+SIMRES$FileEndSec = SIMRES$File.Offset..s.+SIMRES$Delta.Time..s.
+SIMRES$Provider = 'SIMRES'
+
+SIMRES= SIMRES[, colOut]
+
 #############################################################################
 
-allAnno = rbind(DFO_Pilk, ONC_anno, JASCO_malahat, Viersanno, DFO_Yerk)
+allAnno = rbind(DFO_Pilk, ONC_anno, JASCO_malahat, Viersanno, DFO_Yerk, SIMRES)
+
+# overall annotations
+table(allAnno$ClassSpecies)
+
 # Pull out the killer whale data
 KW_data = subset(allAnno, KW ==1)
 
