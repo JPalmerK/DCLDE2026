@@ -142,6 +142,7 @@ PilkAnno$Ecotype = as.factor(PilkAnno$kw_ecotype)
 levels(PilkAnno$Ecotype)<-c(NA, 'NRKW', 'NRKW', 'OKW', 'OKW', 'SRKW', 'SRKW',
                             'BKW', 'BKW', NA)
 
+
 PilkAnno$Soundfile = PilkAnno$filename
 PilkAnno$FileBeginSec = PilkAnno$start
 PilkAnno$FileEndSec = PilkAnno$end
@@ -162,6 +163,7 @@ PilkAnno$ClassSpecies[
                                'Rubbing')] = 'AB'
 
 PilkAnno$ClassSpecies[!PilkAnno$ClassSpecies %in% ClassSpeciesList] = 'UndBio'
+PilkAnno$ClassSpecies[!is.na(PilkAnno$Ecotype)] = 'KW'
 
 DFO_Pilk = PilkAnno[, c(colOut)]
 
