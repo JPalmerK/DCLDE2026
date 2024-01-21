@@ -244,12 +244,15 @@ file_list <- list.files(path = 'E:\\DCLDE2026\\DFO_Yerk\\Audio_and_labels\\Annot
 DFO_Yerk <- do.call(rbind, lapply(file_list, function(file) {
   data <- read.csv(file)
   if (nrow(data) > 0) {
-    data$Dep <- basename(file)  # Add filename as a new column
+    data$Dep <- as.factor(basename(file))  # Add filename as a new column
     return(data)
   } else {
     return(NULL)  # Return NULL for empty data frames
   }
 }))
+
+levels(DFO_Yerk$Dep)<-c('CarmanahPt', 'StrGeoN1', 'StrGeoN2','StrGeoS1',
+                        'StrGeoS2','SwanChan')
 
 # Fucking PAMGuard
 DFO_Yerk = DFO_Yerk[DFO_Yerk$duration>0,]
