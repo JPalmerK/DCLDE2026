@@ -125,8 +125,8 @@ PilkAnno1 = read.csv('E:\\DCLDE2026/DFO_Pilkington/annotations/annot_H50bjRcb_SM
 PilkAnno2 = read.csv('E:\\DCLDE2026/DFO_Pilkington/annotations/annot_KkHK0R2F_SM_det.csv')
 
 
-PilkAnno1$Dep='DFO_01'
-PilkAnno2$Dep='DFO_02'
+PilkAnno1$Dep='WVanIsl'
+PilkAnno2$Dep='NorthBc'
 
 PilkAnno = rbind(PilkAnno1, PilkAnno2)
 
@@ -185,7 +185,7 @@ file_list <- list.files(path = 'E:/DCLDE2026/JASCO/annotations/',
 JASCO_malahat <- do.call(rbind, lapply(file_list, function(file) {
   data <- read.csv(file)
   if (nrow(data) > 0) {
-    data$Dep <- basename(file)  # Add filename as a new column
+    data$Dep <- as.factor(basename(file))  # Add filename as a new column
     return(data)
   } else {
     return(NULL)  # Return NULL for empty data frames
@@ -225,7 +225,7 @@ JASCO_malahat$ClassSpecies[JASCO_malahat$ClassSpecies %in%
                              c("HW/KW", "SEAGULL?")]= 'UndBio'
 
 JASCO_malahat$Provider = 'JASCO_Malahat'
-
+levels(JASCO_malahat$Dep)<-c('Stn_3', 'Stn_4', 'Stn_5', 'Stn_6')
 
 JASCO_malahat = JASCO_malahat[,c(colOut)]
 
