@@ -17,10 +17,11 @@ library(dplyr)
 # Final output column names
 
 colOut = c('Soundfile','Dep','LowFreqHz','HighFreqHz','FileEndSec', 'UTC',
-           'FileBeginSec','ClassSpecies','KW','KW_certain','Ecotype', 'Provider')
+           'FileBeginSec','ClassSpecies','KW','KW_certain','Ecotype', 'Provider',
+           'AnnotationLevel')
 
 ClassSpeciesList = c('KW', 'HW', 'AB', 'UndBio')
-
+AnnotationLevelList = c('File', 'Detection', 'Call')
 # For the class species, options are: KW, HW, AB, and UndBio
 # Killer whale, humpback whale, abiotic, and unknown Bio which includes 
 # Other dolphin acoustically active species ranging from fin whales, to 
@@ -31,8 +32,8 @@ ClassSpeciesList = c('KW', 'HW', 'AB', 'UndBio')
 
 
 # Jasper, April, and Jenn have all annotated thse files. There is some overla
-JasperAnno = read.csv('E:\\DCLDE2026/ONC/Meta/BarkleyCanyonAnnotations_Public_Final.csv')
-AprJenAnno = read.csv('E:\\DCLDE2026/ONC/Meta/jen_onc_barkley-canyon_annot.csv')
+JasperAnno = read.csv('E:\\DCLDE2026/ONC/Annotations/BarkleyCanyonAnnotations_Public_Final.csv')
+AprJenAnno = read.csv('E:\\DCLDE2026/ONC/Annotations/jen_onc_barkley-canyon_annot.csv')
 
 
 # Add bool for KWs
@@ -63,7 +64,7 @@ JasperAnno$ClassSpecies[JasperAnno$ClassSpecies=='Oo']= 'KW'
 JasperAnno$ClassSpecies[JasperAnno$ClassSpecies=='Mn']= 'HW'
 JasperAnno$ClassSpecies[!JasperAnno$ClassSpecies %in% ClassSpeciesList] = 'UndBio'
 JasperAnno$Provider= 'ONC'
-
+JasperAnno$AnnotationLevel = 'Call'
 
 # Add bool for KWs
 AprJenAnno <- AprJenAnno %>%
@@ -99,7 +100,7 @@ AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in%
 AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 
                           c("Unknown", "Vessel Noise","Vessel noise",
                             "Unknown ", "Vessel Noise?", "unknown",
-                            "Mooring", "Vessel noise?", "Uknown", "")]= 'Ab'
+                            "Mooring", "Vessel noise?", "Uknown", "")]= 'AB'
 AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 'KW?'] = 'KW'
 AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 'HW?'] = 'HW'
 
@@ -107,6 +108,7 @@ AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 'HW?'] = 'HW'
 AprJenAnno$ClassSpecies[AprJenAnno$Comments == 'HW'] ='HW'
 AprJenAnno$Provider = 'ONC_HALLO' # I think HALLO paid for JASCO's annotations
 
+AprJenAnno$AnnotationLevel = 'Call'
 
 ONC_anno = rbind(AprJenAnno[, c(colOut)], JasperAnno[,  c(colOut)])
 rm(list= c('JasperAnno', 'AprJenAnno'))
@@ -165,6 +167,17 @@ PilkAnno$ClassSpecies[
 PilkAnno$ClassSpecies[!PilkAnno$ClassSpecies %in% ClassSpeciesList] = 'UndBio'
 PilkAnno$ClassSpecies[!is.na(PilkAnno$Ecotype)] = 'KW'
 
+PilkAnno$AnnotationLevel = 'Call'
+
+PilkAnno$dur = PilkAnno$FileEndSec  - PilkAnno$FileBeginSec
+PilkAnno$end_time = PilkAnno$UTC+ seconds(PilkAnno$dur)
+
+# Sort and then identify overlaps
+PilkAnno <- PilkAnno %>%
+  arrange(Dep,UTC) %>%
+  mutate(overlap = lead(UTC) <= lag(end_time, default = first(end_time)))
+
+
 DFO_Pilk = PilkAnno[, c(colOut)]
 
 rm(list= c('PilkAnno1', 'PilkAnno2', 'PilkAnno'))
@@ -213,16 +226,32 @@ JASCO_malahat$Ecotype[JASCO_malahat$kw_ecotype == 'TKW?'] ='BKW'
 
 
 
-colnames(JASCO_malahat)[c(5,6,3,4,1,8)]<-c('LowFreqHz','HighFreqHz','FileEndSec',
-                                         'FileBeginSec','Soundfile','ClassSpecies')
+colnames(JASCO_malahat)[c(5,6,3,4,1,8)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
+                                           'FileEndSec', 'Soundfile','ClassSpecies')
 
 JASCO_malahat$ClassSpecies[JASCO_malahat$ClassSpecies == 'KW?'] ='KW'
 JASCO_malahat$ClassSpecies[JASCO_malahat$ClassSpecies %in% 
+                             c("HW/KW?", "HW?")]= 'HW'
+
+JASCO_malahat$ClassSpecies[JASCO_malahat$ClassSpecies %in% 
                              c("VESSEL", "VESSEL/HW?",  "VESSEL CHAIN", 
-                               "CHAIN","UNK", "HW/KW?", "HW?")]= 'Ab'
+                               "CHAIN","UNK")]= 'AB'
 
 JASCO_malahat$ClassSpecies[JASCO_malahat$ClassSpecies %in% 
                              c("HW/KW", "SEAGULL?")]= 'UndBio'
+
+
+JASCO_malahat$AnnotationLevel = 'Call'
+
+
+JASCO_malahat$end_time = JASCO_malahat$UTC+ seconds(JASCO_malahat$dur)
+
+# Sort and then identify overlaps
+JASCO_malahat <- JASCO_malahat %>%
+  arrange(Dep,UTC) %>%
+  mutate(overlap = lead(UTC) <= lag(end_time, default = first(end_time)))
+
+
 
 JASCO_malahat$Provider = 'JASCO_Malahat'
 levels(JASCO_malahat$Dep)<-c('Stn_3', 'Stn_4', 'Stn_5', 'Stn_6')
@@ -236,7 +265,7 @@ JASCO_malahat = JASCO_malahat[,c(colOut)]
 ############################################################################
 
 # Get a list of files matching the pattern 'annot_Malahat'
-file_list <- list.files(path = 'E:\\DCLDE2026\\DFO_Yerk\\Audio_and_labels\\Annotations', 
+file_list <- list.files(path = 'E:\\DCLDE2026\\DFO_Yerk\\Annotations', 
                         pattern = '*csv', full.names = TRUE)
 
 
@@ -262,7 +291,7 @@ DFO_Yerk = DFO_Yerk[!duplicated(DFO_Yerk),]
 DFO_Yerk$Soundfile = DFO_Yerk$soundfile
 DFO_Yerk$LowFreqHz = DFO_Yerk$lf
 DFO_Yerk$HighFreqHz = DFO_Yerk$hf
-DFO_Yerk$UTC = as.POSIXct( DFO_Yerk$date_time_utc[1],  
+DFO_Yerk$UTC = as.POSIXct( DFO_Yerk$date_time_utc,  
                            format="%Y-%m-%d %H:%M:%OS", tz = 'UTC')
 
 DFO_Yerk$FileBeginSec = DFO_Yerk$elapsed_time_seconds
@@ -277,8 +306,24 @@ levels(DFO_Yerk$ClassSpecies)<-c('HW', 'KW', 'KW', 'KW', 'UndBio', 'AB')
 DFO_Yerk$KW_certain = ifelse(DFO_Yerk$ClassSpecies== 'KW', 1,0)
 DFO_Yerk$Provider = 'DFO_Yerk'
 
+
+DFO_Yerk$AnnotationLevel = 'Detection'
+
+
 # Apparently no uncertain calls
 DFO_Yerk$KW = DFO_Yerk$KW_certain
+
+
+DFO_Yerk$dur = DFO_Yerk$FileEndSec  - DFO_Yerk$FileBeginSec
+DFO_Yerk$end_time = DFO_Yerk$UTC+ seconds(DFO_Yerk$dur)
+
+# Sort and then identify overlaps
+DFO_Yerk <- DFO_Yerk %>%
+  arrange(Dep,UTC) %>%
+  mutate(overlap = lead(UTC) <= lag(end_time, default = first(end_time)))
+
+
+
 
 DFO_Yerk = DFO_Yerk[, colOut]
 
@@ -288,7 +333,7 @@ DFO_Yerk = DFO_Yerk[, colOut]
 ###############################################################################
 # Viers Data
 
-Viersanno = read.csv('E:\\DCLDE2026\\OrcaSound\\Meta/ModifiedAnnotations.csv')
+Viersanno = read.csv('E:\\DCLDE2026\\OrcaSound\\Annotations/ModifiedAnnotations.csv')
 Viersanno$start_time_s = as.numeric(Viersanno$start_time_s) 
 
 Viersanno$DateTime <- with(Viersanno, paste(date, pst_or_master_tape_identifier))
@@ -325,7 +370,12 @@ Viersanno$HighFreqHz =NaN
 Viersanno$FileBeginSec = Viersanno$start_time_s
 Viersanno$FileEndSec = Viersanno$start_time_s+Viersanno$duration_s
 
+
+Viersanno$AnnotationLevel = ifelse(Viersanno$ClassSpecies == 'KW',
+                                   'Detection', 'File')
+
 Viersanno = Viersanno[,c(colOut)]
+
 
 rm(list =c('problemData', 'problemIdx'))
 
@@ -336,7 +386,7 @@ rm(list =c('problemData', 'problemIdx'))
 
 
 # Get a list of files matching the pattern 'annot_Malahat'
-file_list <- list.files(path = 'E:\\DCLDE2026\\SIMRES/annotations/', 
+file_list <- list.files(path = 'E:\\DCLDE2026\\SIMRES/annotations/datman/selection_tables/SIMRES2022/', 
                         pattern = '*txt', full.names = TRUE)
 
 
@@ -352,8 +402,8 @@ SIMRES <- do.call(rbind, lapply(file_list, function(file) {
 }))
 
 SIMRES$ClassSpecies = as.factor(SIMRES$Sound.ID.Species)
-levels(SIMRES$ClassSpecies)<-c(NA, 'UndBio', 'KW', 'KW')
 SIMRES$KW_certain =  as.numeric(grepl("KW", SIMRES$Sound.ID.Species))
+levels(SIMRES$ClassSpecies)<-c(NA, 'UndBio','KW',  'KW', 'UndBio')
 
 #check SIMRES files in UTC
 SIMRES$UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z)_.*", "\\1", 
@@ -362,7 +412,7 @@ SIMRES$UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z)_.*", "\\1",
                         tz = 'UTC')+seconds(SIMRES$File.Offset..s.)
 
 SIMRES$Ecotype = as.factor(SIMRES$KW.Ecotype)
-levels(SIMRES$Ecotype)<- c(NA, 'SRKW', 'SRKW')
+levels(SIMRES$Ecotype)<- c(NA, NA, 'SRKW', 'SRKW')
 SIMRES$KW = ifelse(SIMRES$ClassSpecies == 'KW', 1,0)
 
 SIMRES$Soundfile = SIMRES$Begin.File
@@ -372,12 +422,19 @@ SIMRES$HighFreqHz = SIMRES$Low.Freq..Hz.
 SIMRES$FileBeginSec = SIMRES$File.Offset..s.
 SIMRES$FileEndSec = SIMRES$File.Offset..s.+SIMRES$Delta.Time..s.
 SIMRES$Provider = 'SIMRES'
+SIMRES$AnnotationLevel = 'Call'
 
 SIMRES= SIMRES[, colOut]
 
 #############################################################################
 
 allAnno = rbind(DFO_Pilk, ONC_anno, JASCO_malahat, Viersanno, DFO_Yerk, SIMRES)
+allAnno$Duration = 0
+allAnno$Duration[allAnno$Provider != 'OrcaSound']=
+allAnno$FileEndSec[allAnno$Provider != 'OrcaSound'] - allAnno$FileBeginSec[allAnno$Provider != 'OrcaSound']
+  
+allAnno = rbind( ONC_anno, DFO_Pilk,JASCO_malahat, DFO_Yerk, SIMRES)
+
 
 # overall annotations
 table(allAnno$ClassSpecies)
