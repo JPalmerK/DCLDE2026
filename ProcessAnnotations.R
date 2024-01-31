@@ -18,7 +18,7 @@ library(dplyr)
 
 colOut = c('Soundfile','Dep','LowFreqHz','HighFreqHz','FileEndSec', 'UTC',
            'FileBeginSec','ClassSpecies','KW','KW_certain','Ecotype', 'Provider',
-           'AnnotationLevel')
+           'AnnotationLevel', 'FilePath')
 
 ClassSpeciesList = c('KW', 'HW', 'AB', 'UndBio')
 AnnotationLevelList = c('File', 'Detection', 'Call')
@@ -66,6 +66,17 @@ JasperAnno$ClassSpecies[!JasperAnno$ClassSpecies %in% ClassSpeciesList] = 'UndBi
 JasperAnno$Provider= 'ONC'
 JasperAnno$AnnotationLevel = 'Call'
 
+# Add the filepath and check that files are ok
+# Dayfolder
+dayFolderPath = 'E:\\DCLDE2026\\ONC\\Audio\\BarkleyCanyon'
+
+JasperAnno$FilePath = file.path(dayFolderPath, format(JasperAnno$UTC, "%Y%m%d"),
+                                JasperAnno$Soundfile)
+
+JasperAnno$FileOk  = file.exists(JasperAnno$FilePath) 
+
+
+
 # Add bool for KWs
 AprJenAnno <- AprJenAnno %>%
   mutate(KW =         as.numeric(grepl("KW", sound_id_species)),
@@ -76,9 +87,9 @@ AprJenAnno <- AprJenAnno %>%
 
 # Add Ecotype 
 AprJenAnno$Ecotype = NA
-AprJenAnno$Ecotype[AprJenAnno$Comments == 'KWSR'] ='SRKW'
-AprJenAnno$Ecotype[AprJenAnno$Comments == 'KWT'] ='BKW'
-AprJenAnno$Ecotype[AprJenAnno$Comments == 'KWT?'] ='BKW'
+AprJenAnno$Ecotype[AprJenAnno$kw_ecotype == 'KWSR'] ='SRKW'
+AprJenAnno$Ecotype[AprJenAnno$kw_ecotype == 'KWT'] ='BKW'
+AprJenAnno$Ecotype[AprJenAnno$kw_ecotype == 'KWT?'] ='BKW'
 
 
 colnames(AprJenAnno)[c(1,2,3,4,5, 6)]<-c('LowFreqHz','HighFreqHz','FileEndSec',
@@ -110,6 +121,14 @@ AprJenAnno$Provider = 'ONC_HALLO' # I think HALLO paid for JASCO's annotations
 
 AprJenAnno$AnnotationLevel = 'Call'
 
+
+dayFolderPath = 'E:\\DCLDE2026\\ONC\\Audio\\BarkleyCanyon'
+
+AprJenAnno$FilePath = file.path(dayFolderPath, format(AprJenAnno$UTC, "%Y%m%d"),
+                                AprJenAnno$Soundfile)
+
+AprJenAnno$FileOk  = file.exists(AprJenAnno$FilePath) 
+
 ONC_anno = rbind(AprJenAnno[, c(colOut)], JasperAnno[,  c(colOut)])
 rm(list= c('JasperAnno', 'AprJenAnno'))
 
@@ -129,6 +148,7 @@ PilkAnno2 = read.csv('E:\\DCLDE2026/DFO_Pilkington/annotations/annot_KkHK0R2F_SM
 
 PilkAnno1$Dep='WVanIsl'
 PilkAnno2$Dep='NorthBc'
+
 
 PilkAnno = rbind(PilkAnno1, PilkAnno2)
 
@@ -176,6 +196,31 @@ PilkAnno$end_time = PilkAnno$UTC+ seconds(PilkAnno$dur)
 PilkAnno <- PilkAnno %>%
   arrange(Dep,UTC) %>%
   mutate(overlap = lead(UTC) <= lag(end_time, default = first(end_time)))
+
+
+
+
+
+dayFolderPath_WV = 'E:\\DCLDE2026\\DFO_Pilkington\\Audio\\DFOCRP_H50bjRcb-WCV1'
+dayFolderPath_NBC = 'E:\\DCLDE2026\\DFO_Pilkington\\Audio\\DFOCRP_KkHK0R2F-NML1'
+
+PilkAnno$FilePath = 'blarg'
+
+PilkAnno1$Dep='WVanIsl'
+PilkAnno2$Dep='NorthBc'
+
+
+WVIidx = which(PilkAnno$Dep == 'WVanIsl')
+NBCidx = which(PilkAnno$Dep != 'WVanIsl')
+
+PilkAnno$FilePath[WVIidx] = 
+  file.path(dayFolderPath_WV, format(PilkAnno$UTC[WVIidx], "%Y%m%d"),
+            PilkAnno$Soundfile[WVIidx])
+PilkAnno$FilePath[NBCidx] = 
+  file.path(dayFolderPath_NBC, format(PilkAnno$UTC[NBCidx], "%Y%m%d"),
+            PilkAnno$Soundfile[NBCidx])
+
+PilkAnno$FileOk  = file.exists(PilkAnno$FilePath) 
 
 
 DFO_Pilk = PilkAnno[, c(colOut)]
@@ -254,7 +299,17 @@ JASCO_malahat <- JASCO_malahat %>%
 
 
 JASCO_malahat$Provider = 'JASCO_Malahat'
-levels(JASCO_malahat$Dep)<-c('Stn_3', 'Stn_4', 'Stn_5', 'Stn_6')
+levels(JASCO_malahat$Dep)<-c('STN3', 'STN4', 'STN5', 'STN6')
+
+# Filepaths
+dayFolderPath = 'E:\\DCLDE2026\\JASCO\\Audio'
+JASCO_malahat$FilePath = 
+  file.path(dayFolderPath, JASCO_malahat$Dep, 
+            format(JASCO_malahat$UTC, "%Y%m%d"),
+            JASCO_malahat$Soundfile)
+
+JASCO_malahat$FileOk  = file.exists(JASCO_malahat$FilePath) 
+
 
 JASCO_malahat = JASCO_malahat[,c(colOut)]
 
@@ -322,7 +377,23 @@ DFO_Yerk <- DFO_Yerk %>%
   arrange(Dep,UTC) %>%
   mutate(overlap = lead(UTC) <= lag(end_time, default = first(end_time)))
 
+# Add a new column for deployment folder
+DFO_Yerk$DepFolder = DFO_Yerk$Dep
+levels(DFO_Yerk$DepFolder)<-c('CMN_2022-03-08_20220629_ST_utc',
+                              'SOGN_20210905_20211129_AMAR_utc',
+                              'SOGN_20210905_20211129_AMAR_utc',
+                              'SOGS_20210904_20211118_AMAR_utc',
+                              'SOGS_20210904_20211118_AMAR_utc',
+                              'SWAN_20211113_20220110_AMAR_utc')
 
+# Filepaths
+dayFolderPath = 'E:\\DCLDE2026\\DFO_Yerk\\Audio'
+DFO_Yerk$FilePath = 
+  file.path(dayFolderPath, DFO_Yerk$DepFolder, 
+            format(DFO_Yerk$UTC, "%Y%m%d"),
+            DFO_Yerk$Soundfile)
+
+DFO_Yerk$FileOk  = file.exists(DFO_Yerk$FilePath) 
 
 
 DFO_Yerk = DFO_Yerk[, colOut]
@@ -374,8 +445,14 @@ Viersanno$FileEndSec = Viersanno$start_time_s+Viersanno$duration_s
 Viersanno$AnnotationLevel = ifelse(Viersanno$ClassSpecies == 'KW',
                                    'Detection', 'File')
 
-Viersanno = Viersanno[,c(colOut)]
+# Filepaths
+dayFolderPath = 'E:\\DCLDE2026\\OrcaSound\\Audio'
+Viersanno$FilePath = 
+  file.path(dayFolderPath,Viersanno$Soundfile)
 
+Viersanno$FileOk  = file.exists(Viersanno$FilePath) 
+
+Viersanno = Viersanno[,c(colOut)]
 
 rm(list =c('problemData', 'problemIdx'))
 
@@ -401,6 +478,9 @@ SIMRES <- do.call(rbind, lapply(file_list, function(file) {
   }
 }))
 
+# Clean out blank rows
+SIMRES = SIMRES[!is.na(SIMRES$Selection),]
+
 SIMRES$ClassSpecies = as.factor(SIMRES$Sound.ID.Species)
 SIMRES$KW_certain =  as.numeric(grepl("KW", SIMRES$Sound.ID.Species))
 levels(SIMRES$ClassSpecies)<-c(NA, 'UndBio','KW',  'KW', 'UndBio')
@@ -423,6 +503,27 @@ SIMRES$FileBeginSec = SIMRES$File.Offset..s.
 SIMRES$FileEndSec = SIMRES$File.Offset..s.+SIMRES$Delta.Time..s.
 SIMRES$Provider = 'SIMRES'
 SIMRES$AnnotationLevel = 'Call'
+
+
+# Filepaths- wackadoodle for SIMRES
+dayFolderPath = 'E:\\DCLDE2026\\SIMRES\\Audio\\'
+
+# 1. List all files in the target directory
+allAudio <- list.files(path = dayFolderPath, pattern = "\\.flac$", 
+                       full.names = TRUE, recursive = TRUE)
+
+# 2. Check if each file exists and get the full path
+SIMRES$FilePath <- sapply(SIMRES$Soundfile, function(filename) {
+  # Find the full path of the file (if it exists)
+  full_path <- allAudio[grep(paste0("/", filename, "$"), allAudio)]
+  if (length(full_path) > 0) return(full_path[1]) else return(NA)
+})
+
+
+
+SIMRES$FileOk  = file.exists(SIMRES$FilePath) 
+
+
 
 SIMRES= SIMRES[, colOut]
 
