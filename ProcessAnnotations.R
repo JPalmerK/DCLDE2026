@@ -18,7 +18,7 @@ library(dplyr)
 
 colOut = c('Soundfile','Dep','LowFreqHz','HighFreqHz','FileEndSec', 'UTC',
            'FileBeginSec','ClassSpecies','KW','KW_certain','Ecotype', 'Provider',
-           'AnnotationLevel', 'FilePath')
+           'AnnotationLevel', 'FilePath', 'FileOk')
 
 ClassSpeciesList = c('KW', 'HW', 'AB', 'UndBio')
 AnnotationLevelList = c('File', 'Detection', 'Call')
@@ -288,6 +288,7 @@ JASCO_malahat$ClassSpecies[JASCO_malahat$ClassSpecies %in%
 
 JASCO_malahat$AnnotationLevel = 'Call'
 
+JASCO_malahat$dur = JASCO_malahat$FileEndSec-JASCO_malahat$FileBeginSec
 
 JASCO_malahat$end_time = JASCO_malahat$UTC+ seconds(JASCO_malahat$dur)
 
@@ -530,12 +531,6 @@ SIMRES= SIMRES[, colOut]
 #############################################################################
 
 allAnno = rbind(DFO_Pilk, ONC_anno, JASCO_malahat, Viersanno, DFO_Yerk, SIMRES)
-allAnno$Duration = 0
-allAnno$Duration[allAnno$Provider != 'OrcaSound']=
-allAnno$FileEndSec[allAnno$Provider != 'OrcaSound'] - allAnno$FileBeginSec[allAnno$Provider != 'OrcaSound']
-  
-allAnno = rbind( ONC_anno, DFO_Pilk,JASCO_malahat, DFO_Yerk, SIMRES)
-
 
 # overall annotations
 table(allAnno$ClassSpecies)
@@ -548,17 +543,3 @@ table(KW_data$Ecotype)
 
 ############################################################################
 # Ensure all files are present with their respective annoations
-
-
-# DFO Pilkington
-# Summary infomation
-audioDir = 'E:/DCLDE2026/DFO_Pilkington/'
-wav_files <- list.files(path = audioDir, pattern = "\\.flac$", recursive = TRUE,
-                        full.names = FALSE)
-num_wav_files <- length(wav_files)
-print(num_wav_files)
-
-DFO_anno$Soundfile[1] %in% wav_files
-
-
-
