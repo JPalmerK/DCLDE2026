@@ -55,8 +55,9 @@ JasperAnno$Dep='BarkLeyCanyon'
 # Get time
 JasperAnno <- JasperAnno %>%
   mutate(filename = as.character(Soundfile),  # Make sure the column is treated as character
-         UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z).*", "\\1", filename), 
-                          format = "%Y%m%dT%H%M%S.%OSZ"))
+         UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z).*", "\\1", filename),
+                          format = "%Y%m%dT%H%M%S.%OSZ",  tz = 'UTC'))
+
 JasperAnno$FileBeginSec= as.numeric(JasperAnno$FileBeginSec)
 JasperAnno$UTC = JasperAnno$UTC+ seconds(as.numeric(JasperAnno$FileBeginSec))
 
@@ -66,23 +67,12 @@ JasperAnno$ClassSpecies[!JasperAnno$ClassSpecies %in% ClassSpeciesList] = 'UndBi
 JasperAnno$Provider= 'ONC'
 JasperAnno$AnnotationLevel = 'Call'
 
-# Add the filepath and check that files are ok
-# Dayfolder
-dayFolderPath = 'E:\\DCLDE2026\\ONC\\Audio\\BarkleyCanyon'
-
-JasperAnno$FilePath = file.path(dayFolderPath, format(JasperAnno$UTC, "%Y%m%d"),
-                                JasperAnno$Soundfile)
-
-JasperAnno$FileOk  = file.exists(JasperAnno$FilePath) 
-
-
-
 # Add bool for KWs
 AprJenAnno <- AprJenAnno %>%
   mutate(KW =         as.numeric(grepl("KW", sound_id_species)),
          KW_certain = !as.numeric(grepl("\\?",  sound_id_species)),
          UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z).*", "\\1", filename), 
-                          format = "%Y%m%dT%H%M%S.%OSZ"))
+                          format = "%Y%m%dT%H%M%S.%OSZ", tz='UTC'))
 
 
 # Add Ecotype 
@@ -121,16 +111,119 @@ AprJenAnno$Provider = 'ONC_HALLO' # I think HALLO paid for JASCO's annotations
 
 AprJenAnno$AnnotationLevel = 'Call'
 
+ 
+AprJenAnno$Annotater = 'AprJen'
+JasperAnno$Annotater = 'Jasper'
+
+
+ONC_anno = rbind(AprJenAnno[, c(colOut[1:13])], JasperAnno[,  c(colOut[1:13])])
+
+#rm(list= c('JasperAnno', 'AprJenAnno'))
+
+# some of the dates are fucked up
+badidx = which(ONC_anno$Soundfile=='ICLISTENHF1251_20130615T062356.061Z.wav')
+ONC_anno$UTC[badidx] = as.POSIXct('20130615T062356', 
+                                  format="%Y%m%dT%H%M%S", tz="UTC")+
+  seconds(0.061)+ONC_anno$FileBeginSec[badidx]
+
+badidx = which(ONC_anno$Soundfile=='ICLISTENHF1251_20140402T032959.061Z.wav')
+ONC_anno$UTC[badidx] = as.POSIXct('20140402T032959', format="%Y%m%dT%H%M%S", tz="UTC")+seconds(0.061)
+
+# Was this date hand entered? Appears to be 60 rather than 06
+badidx = which(ONC_anno$Soundfile=='ICLISTENHF1251_20140701T605216.144Z.wav')
+ONC_anno$UTC[badidx] = as.POSIXct('20140701T065216',
+                                  format="%Y%m%dT%H%M%S", tz="UTC")+
+  seconds(0.144)+ONC_anno$FileBeginSec[badidx]
+
+badidx = which(ONC_anno$Soundfile=='ICLISTENHF1251_20140702T054216.391Z.wav')
+ONC_anno$UTC[badidx] = as.POSIXct('20140702T054216',
+                                  format="%Y%m%dT%H%M%S", tz="UTC")+
+  seconds(0.391)+ONC_anno$FileBeginSec[badidx]
+
+badidx = which(ONC_anno$Soundfile=='ICLISTENHF1251_20140804T1345424.361Z.wav')
+ONC_anno$UTC[badidx] = as.POSIXct('20140804T1345424',
+                                  format="%Y%m%dT%H%M%S", tz="UTC")+
+  seconds(0.361)+ONC_anno$FileBeginSec[badidx]
+
+
+badidx = which(ONC_anno$Soundfile=='ICLISTENHF1251_20140903T231409.061Z.wav')
+ONC_anno$UTC[badidx] = as.POSIXct('20140903T231409',
+                                  format="%Y%m%dT%H%M%S", tz="UTC")+
+  seconds(0.061)+ONC_anno$FileBeginSec[badidx]
+
+
+badidx = which(ONC_anno$Soundfile=='ICLISTENHF1251_20141004T102246.170Z.wav')
+ONC_anno$UTC[badidx] = as.POSIXct('20141004T102246',
+                                  format="%Y%m%dT%H%M%S", tz="UTC")+
+  seconds(0.170)+ONC_anno$FileBeginSec[badidx]
+
+badidx = which(ONC_anno$Soundfile=='ICLISTENHF1251_20141103T174455.370.wav')
+ONC_anno$UTC[badidx] = as.POSIXct('20141103T174455',
+                                  format="%Y%m%dT%H%M%S", tz="UTC")+
+  seconds(0.370)+ONC_anno$FileBeginSec[badidx]
+
+
+badidx = which(ONC_anno$Soundfile=='ICLISTENHF1251_20140104T140150.099Z-HPF.wav')
+ONC_anno$UTC[badidx] = as.POSIXct('20140104T140150',
+                                  format="%Y%m%dT%H%M%S", tz="UTC")+
+  seconds(0.099)+ONC_anno$FileBeginSec[badidx]
+
+
+
+badidx = which(ONC_anno$Soundfile=='ICLISTENHF1251_20140202T131456.257Z.wav')
+ONC_anno$UTC[badidx] = as.POSIXct('20140104T140150',
+                                  format="%Y%m%dT%H%M%S", tz="UTC")+
+  seconds(0.099)+ONC_anno$FileBeginSec[badidx]
+
+
 
 dayFolderPath = 'E:\\DCLDE2026\\ONC\\Audio\\BarkleyCanyon'
+ONC_anno$FilePath = file.path(dayFolderPath,
+                              format(ONC_anno$UTC-seconds(ONC_anno$FileBeginSec), "%Y%m%d"),
+                              ONC_anno$Soundfile)
 
-AprJenAnno$FilePath = file.path(dayFolderPath, format(AprJenAnno$UTC, "%Y%m%d"),
-                                AprJenAnno$Soundfile)
+ONC_anno$FileOk  = file.exists(ONC_anno$FilePath)
 
-AprJenAnno$FileOk  = file.exists(AprJenAnno$FilePath) 
 
-ONC_anno = rbind(AprJenAnno[, c(colOut)], JasperAnno[,  c(colOut)])
-rm(list= c('JasperAnno', 'AprJenAnno'))
+
+
+
+# Create a list of the 'not ok files'
+missingData = ONC_anno[ONC_anno$FileOk== FALSE,]
+
+JASPERsflist = read.csv('C:\\Users/kaitlin.palmer/Downloads/DownloadListpy (1).csv',
+                          header = FALSE)
+
+# Ensure all missing files in that list
+missingData$FilesInONClist = missingData$Soundfile %in% JASPERsflist$V1
+
+
+# Now make a new copy of the missing files for the python download
+needandcanget = unique(missingData$Soundfile[missingData$FilesInONClist == TRUE])
+needandcantget = unique(missingData$Soundfile[missingData$FilesInONClist == FALSE])
+
+JASPERsflist$ToDownload = JASPERsflist$V1 %in% needandcanget
+JASPERsflist$MIA = JASPERsflist$V1 %in% needandcantget
+
+ListSub = JASPERsflist[JASPERsflist$ToDownload== TRUE,]
+ListOutstanding = JASPERsflist[JASPERsflist$MIA== TRUE,]
+
+write.csv(ListSub[,c(1:2)], 
+          'C:\\Users/kaitlin.palmer/Downloads/DownloadListpyMod.csv',
+            row.names = FALSE)
+
+
+
+# figure out the still missing files..
+aa = missingData[missingData$FilesInONClist==FALSE,]
+. 
+aa = data.frame(MissingFiles = unique(missingData$Soundfile[missingData$FilesInONClist==FALSE]))
+
+aa <- aa %>%
+  mutate(filename = as.character(MissingFiles ), 
+         UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z).*", "\\1", filename),
+                          format = "%Y%m%dT%H%M%S.%OSZ",  tz = 'UTC'))
+
 
 
 ############################################################################
