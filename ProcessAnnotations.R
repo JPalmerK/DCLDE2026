@@ -36,6 +36,12 @@ JasperAnno = read.csv('E:\\DCLDE2026/ONC/Annotations/BarkleyCanyonAnnotations_Pu
 AprJenAnno = read.csv('E:\\DCLDE2026/ONC/Annotations/jen_onc_barkley-canyon_annot.csv')
 
 
+JASPERsflist = read.csv('C:\\Users/kaitlin.palmer/Downloads/DownloadListpy (2).csv',
+                        header = FALSE)
+
+JasperAnno$FilesInList = JasperAnno$Soundfile %in% JASPERsflist$V1
+
+
 # Add bool for KWs
 JasperAnno <- JasperAnno %>%
   mutate(KW = as.numeric(grepl("Oo", Species)),
@@ -177,6 +183,12 @@ ONC_anno$UTC[badidx] = as.POSIXct('20140104T140150',
 
 
 
+badidx = which(ONC_anno$Soundfile=='ICLISTENHF1251_20141004T102246.170Z.wav')
+ONC_anno$UTC[badidx] = as.POSIXct('20141004T102246',
+                                  format="%Y%m%dT%H%M%S", tz="UTC")+
+  seconds(0.170)+ONC_anno$FileBeginSec[badidx]
+
+
 dayFolderPath = 'E:\\DCLDE2026\\ONC\\Audio\\BarkleyCanyon'
 ONC_anno$FilePath = file.path(dayFolderPath,
                               format(ONC_anno$UTC-seconds(ONC_anno$FileBeginSec), "%Y%m%d"),
@@ -186,13 +198,14 @@ ONC_anno$FileOk  = file.exists(ONC_anno$FilePath)
 
 
 
+ONC_anno$FileUTC =ONC_anno$UTC- seconds(as.numeric(ONC_anno$FileBeginSec))
+
+
 
 
 # Create a list of the 'not ok files'
 missingData = ONC_anno[ONC_anno$FileOk== FALSE,]
 
-JASPERsflist = read.csv('C:\\Users/kaitlin.palmer/Downloads/DownloadListpy (1).csv',
-                          header = FALSE)
 
 # Ensure all missing files in that list
 missingData$FilesInONClist = missingData$Soundfile %in% JASPERsflist$V1
@@ -207,24 +220,24 @@ JASPERsflist$MIA = JASPERsflist$V1 %in% needandcantget
 
 ListSub = JASPERsflist[JASPERsflist$ToDownload== TRUE,]
 ListOutstanding = JASPERsflist[JASPERsflist$MIA== TRUE,]
-
-write.csv(ListSub[,c(1:2)], 
-          'C:\\Users/kaitlin.palmer/Downloads/DownloadListpyMod.csv',
-            row.names = FALSE)
-
-
-
-# figure out the still missing files..
-aa = missingData[missingData$FilesInONClist==FALSE,]
-. 
-aa = data.frame(MissingFiles = unique(missingData$Soundfile[missingData$FilesInONClist==FALSE]))
-
-aa <- aa %>%
-  mutate(filename = as.character(MissingFiles ), 
-         UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z).*", "\\1", filename),
-                          format = "%Y%m%dT%H%M%S.%OSZ",  tz = 'UTC'))
+# 
+# write.csv(ListSub[,c(1:2)], 
+#           'C:\\Users/kaitlin.palmer/Downloads/DownloadListpyMod.csv',
+#             row.names = FALSE)
 
 
+# 
+# # figure out the still missing files..
+# aa = missingData[missingData$FilesInONClist==FALSE,]
+# . 
+# aa = data.frame(MissingFiles = unique(missingData$Soundfile[missingData$FilesInONClist==FALSE]))
+# 
+# aa <- aa %>%
+#   mutate(filename = as.character(MissingFiles ), 
+#          UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z).*", "\\1", filename),
+#                           format = "%Y%m%dT%H%M%S.%OSZ",  tz = 'UTC'))
+# 
+# 
 
 ############################################################################
 # DFO Pilkington
@@ -623,7 +636,7 @@ SIMRES= SIMRES[, colOut]
 
 #############################################################################
 
-allAnno = rbind(DFO_Pilk, ONC_anno, JASCO_malahat, Viersanno, DFO_Yerk, SIMRES)
+allAnno = rbind(DFO_Pilk, ONC_anno[, colOut], JASCO_malahat, Viersanno, DFO_Yerk, SIMRES)
 
 # overall annotations
 table(allAnno$ClassSpecies)
