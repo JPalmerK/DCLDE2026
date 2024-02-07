@@ -10,7 +10,7 @@ library(dplyr)
 # 1) Ocean Networks Canada 
 # 2) Viers
 # 3) DFO Pilkington
-# 4) DFO Yerk
+# 4) DFO Yurk
 # 5) SMRU
 
 ############################################################################
@@ -423,16 +423,16 @@ JASCO_malahat = JASCO_malahat[,c(colOut)]
 
 
 ############################################################################
-# DFO Yerk
+# DFO Yurk
 ############################################################################
 
 # Get a list of files matching the pattern 'annot_Malahat'
-file_list <- list.files(path = 'E:\\DCLDE2026\\DFO_Yerk\\Annotations', 
+file_list <- list.files(path = 'E:\\DCLDE2026\\DFO_Yurk\\Annotations', 
                         pattern = '*csv', full.names = TRUE)
 
 
 # Read and concatenate the CSV files with filename as a separate column (if non-empty)
-DFO_Yerk <- do.call(rbind, lapply(file_list, function(file) {
+DFO_Yurk <- do.call(rbind, lapply(file_list, function(file) {
   data <- read.csv(file)
   if (nrow(data) > 0) {
     data$Dep <- as.factor(basename(file))  # Add filename as a new column
@@ -442,51 +442,51 @@ DFO_Yerk <- do.call(rbind, lapply(file_list, function(file) {
   }
 }))
 
-levels(DFO_Yerk$Dep)<-c('CarmanahPt', 'StrGeoN1', 'StrGeoN2','StrGeoS1',
+levels(DFO_Yurk$Dep)<-c('CarmanahPt', 'StrGeoN1', 'StrGeoN2','StrGeoS1',
                         'StrGeoS2','SwanChan')
 
 # Fucking PAMGuard
-DFO_Yerk = DFO_Yerk[DFO_Yerk$duration>0,]
-DFO_Yerk = DFO_Yerk[!duplicated(DFO_Yerk),]
+DFO_Yurk = DFO_Yurk[DFO_Yurk$duration>0,]
+DFO_Yurk = DFO_Yurk[!duplicated(DFO_Yurk),]
 
 # Standardize formatting
-DFO_Yerk$Soundfile = DFO_Yerk$soundfile
-DFO_Yerk$LowFreqHz = DFO_Yerk$lf
-DFO_Yerk$HighFreqHz = DFO_Yerk$hf
-DFO_Yerk$UTC = as.POSIXct( DFO_Yerk$date_time_utc,  
+DFO_Yurk$Soundfile = DFO_Yurk$soundfile
+DFO_Yurk$LowFreqHz = DFO_Yurk$lf
+DFO_Yurk$HighFreqHz = DFO_Yurk$hf
+DFO_Yurk$UTC = as.POSIXct( DFO_Yurk$date_time_utc,  
                            format="%Y-%m-%d %H:%M:%OS", tz = 'UTC')
 
-DFO_Yerk$FileBeginSec = DFO_Yerk$elapsed_time_seconds
-DFO_Yerk$FileEndSec = DFO_Yerk$FileBeginSec+DFO_Yerk$duration/1000
+DFO_Yurk$FileBeginSec = DFO_Yurk$elapsed_time_seconds
+DFO_Yurk$FileEndSec = DFO_Yurk$FileBeginSec+DFO_Yurk$duration/1000
 
-DFO_Yerk$Ecotype = as.factor(DFO_Yerk$species)
-levels(DFO_Yerk$Ecotype)<-c(NA, 'NRKW', 'SRKW', 'BKW', NA, NA)
+DFO_Yurk$Ecotype = as.factor(DFO_Yurk$species)
+levels(DFO_Yurk$Ecotype)<-c(NA, 'NRKW', 'SRKW', 'BKW', NA, NA)
 
-DFO_Yerk$ClassSpecies = as.factor(DFO_Yerk$species)
-levels(DFO_Yerk$ClassSpecies)<-c('HW', 'KW', 'KW', 'KW', 'UndBio', 'AB')
+DFO_Yurk$ClassSpecies = as.factor(DFO_Yurk$species)
+levels(DFO_Yurk$ClassSpecies)<-c('HW', 'KW', 'KW', 'KW', 'UndBio', 'AB')
 
-DFO_Yerk$KW_certain = ifelse(DFO_Yerk$ClassSpecies== 'KW', 1,0)
-DFO_Yerk$Provider = 'DFO_Yerk'
+DFO_Yurk$KW_certain = ifelse(DFO_Yurk$ClassSpecies== 'KW', 1,0)
+DFO_Yurk$Provider = 'DFO_Yurk'
 
 
-DFO_Yerk$AnnotationLevel = 'Detection'
+DFO_Yurk$AnnotationLevel = 'Detection'
 
 
 # Apparently no uncertain calls
-DFO_Yerk$KW = DFO_Yerk$KW_certain
+DFO_Yurk$KW = DFO_Yurk$KW_certain
 
 
-DFO_Yerk$dur = DFO_Yerk$FileEndSec  - DFO_Yerk$FileBeginSec
-DFO_Yerk$end_time = DFO_Yerk$UTC+ seconds(DFO_Yerk$dur)
+DFO_Yurk$dur = DFO_Yurk$FileEndSec  - DFO_Yurk$FileBeginSec
+DFO_Yurk$end_time = DFO_Yurk$UTC+ seconds(DFO_Yurk$dur)
 
 # Sort and then identify overlaps
-DFO_Yerk <- DFO_Yerk %>%
+DFO_Yurk <- DFO_Yurk %>%
   arrange(Dep,UTC) %>%
   mutate(overlap = lead(UTC) <= lag(end_time, default = first(end_time)))
 
 # Add a new column for deployment folder
-DFO_Yerk$DepFolder = DFO_Yerk$Dep
-levels(DFO_Yerk$DepFolder)<-c('CMN_2022-03-08_20220629_ST_utc',
+DFO_Yurk$DepFolder = DFO_Yurk$Dep
+levels(DFO_Yurk$DepFolder)<-c('CMN_2022-03-08_20220629_ST_utc',
                               'SOGN_20210905_20211129_AMAR_utc',
                               'SOGN_20210905_20211129_AMAR_utc',
                               'SOGS_20210904_20211118_AMAR_utc',
@@ -494,16 +494,16 @@ levels(DFO_Yerk$DepFolder)<-c('CMN_2022-03-08_20220629_ST_utc',
                               'SWAN_20211113_20220110_AMAR_utc')
 
 # Filepaths
-dayFolderPath = 'E:\\DCLDE2026\\DFO_Yerk\\Audio'
-DFO_Yerk$FilePath = 
-  file.path(dayFolderPath, DFO_Yerk$DepFolder, 
-            format(DFO_Yerk$UTC, "%Y%m%d"),
-            DFO_Yerk$Soundfile)
+dayFolderPath = 'E:\\DCLDE2026\\DFO_Yurk\\Audio'
+DFO_Yurk$FilePath = 
+  file.path(dayFolderPath, DFO_Yurk$DepFolder, 
+            format(DFO_Yurk$UTC, "%Y%m%d"),
+            DFO_Yurk$Soundfile)
 
-DFO_Yerk$FileOk  = file.exists(DFO_Yerk$FilePath) 
+DFO_Yurk$FileOk  = file.exists(DFO_Yurk$FilePath) 
 
 
-DFO_Yerk = DFO_Yerk[, colOut]
+DFO_Yurk = DFO_Yurk[, colOut]
 
 
 
@@ -636,7 +636,7 @@ SIMRES= SIMRES[, colOut]
 
 #############################################################################
 
-allAnno = rbind(DFO_Pilk, ONC_anno[, colOut], JASCO_malahat, Viersanno, DFO_Yerk, SIMRES)
+allAnno = rbind(DFO_Pilk, ONC_anno[, colOut], JASCO_malahat, Viersanno, DFO_Yurk, SIMRES)
 
 # overall annotations
 table(allAnno$ClassSpecies)
