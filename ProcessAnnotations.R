@@ -568,7 +568,6 @@ rm(list =c('problemData', 'problemIdx'))
 ##########################################################################
 
 
-
 # Get a list of files matching the pattern 'annot_Malahat'
 file_list <- list.files(path = 'E:\\DCLDE2026\\SIMRES/annotations/datman/selection_tables/SIMRES2022/', 
                         pattern = '*txt', full.names = TRUE)
@@ -648,4 +647,10 @@ table(KW_data$Ecotype)
 
 
 ############################################################################
-# Ensure all files are present with their respective annoations
+# Histogram of months
+library(ggplot2)
+
+ggplot(data = allAnno, aes(x= month(UTC)))+
+  geom_histogram(aes(fill  = as.factor(KW)), bins = 12)+
+  facet_wrap(~Provider, scales = 'free_y')
+
