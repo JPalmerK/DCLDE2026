@@ -48,7 +48,6 @@ JasperAnno <- JasperAnno %>%
          KW_certain = as.numeric(grepl("Oo", Species)))
 
 
-
 # Add Ecotype 
 JasperAnno$Ecotype[JasperAnno$Ecotype == 'SRKW'] ='SRKW'
 JasperAnno$Ecotype[JasperAnno$Comments == 'BKW'] ='BKW'
@@ -81,6 +80,8 @@ AprJenAnno <- AprJenAnno %>%
                           format = "%Y%m%dT%H%M%S.%OSZ", tz='UTC'))
 
 
+AprJenAnno$KW_certain[]
+
 # Add Ecotype 
 AprJenAnno$Ecotype = NA
 AprJenAnno$Ecotype[AprJenAnno$kw_ecotype == 'KWSR'] ='SRKW'
@@ -88,8 +89,11 @@ AprJenAnno$Ecotype[AprJenAnno$kw_ecotype == 'KWT'] ='BKW'
 AprJenAnno$Ecotype[AprJenAnno$kw_ecotype == 'KWT?'] ='BKW'
 
 
-colnames(AprJenAnno)[c(1,2,3,4,5, 6)]<-c('LowFreqHz','HighFreqHz','FileEndSec',
-                                        'FileBeginSec','Soundfile','ClassSpecies')
+colnames(AprJenAnno)[c(1,2,3,4,5)]<-c('LowFreqHz','HighFreqHz','FileEndSec',
+                                        'FileBeginSec','Soundfile')
+
+AprJenAnno$ClassSpecies = AprJenAnno$sound_id_species
+
 
 AprJenAnno$UTC = AprJenAnno$UTC+ seconds(as.numeric(AprJenAnno$FileBeginSec))
 
@@ -113,6 +117,14 @@ AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 'HW?'] = 'HW'
 
 
 AprJenAnno$ClassSpecies[AprJenAnno$Comments == 'HW'] ='HW'
+
+# Index of ucnertain killer whale calls
+idxUncertainKWcalls = which(AprJenAnno$ClassSpecies== 'KW' & 
+                              AprJenAnno$confidence %in% c('Medium', 'm', 'l',
+                                                           'Low', 'M', 'L'))
+AprJenAnno$KW_certain[idxUncertainKWcalls]<-FALSE
+AprJenAnno$KW_certain[AprJenAnno$ClassSpecies != 'KW']= FALSE
+
 AprJenAnno$Provider = 'ONC_HALLO' # I think HALLO paid for JASCO's annotations
 
 AprJenAnno$AnnotationLevel = 'Call'
