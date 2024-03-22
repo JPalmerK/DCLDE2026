@@ -40,21 +40,31 @@ JASPERsflist = read.csv('C:\\Users/kaitlin.palmer/Downloads/DownloadListpy (2).c
                         header = FALSE)
 
 JasperAnno$FilesInList = JasperAnno$Soundfile %in% JASPERsflist$V1
+colnames(JasperAnno)[8]<-'origEcotype'
 
 
 # Add bool for KWs
 JasperAnno <- JasperAnno %>%
-  mutate(KW = as.numeric(grepl("Oo", Species)),
-         KW_certain = as.numeric(grepl("Oo", Species)))
+  mutate(KW = as.numeric(grepl("Oo", Species)))
 
+JasperAnno$KW_certain =NA 
+
+JasperAnno$KW_certain[JasperAnno$KW ==1 & 
+                        grepl("\\|", JasperAnno$KW) == FALSE]= 1
+JasperAnno$KW_certain[JasperAnno$KW ==1 & 
+                        grepl("\\|", JasperAnno$Species) == TRUE] = 0
 
 # Add Ecotype 
+JasperAnno$Ecotype<-JasperAnno$origEcotype
 JasperAnno$Ecotype[JasperAnno$Ecotype == 'SRKW'] ='SRKW'
 JasperAnno$Ecotype[JasperAnno$Comments == 'BKW'] ='BKW'
 JasperAnno$Ecotype[JasperAnno$Comments == 'OKW'] ='OKW'
 
-colnames(JasperAnno)[c(2,3,4,5,6)]<-c('FileBeginSec','FileEndSec', 
-                                        'HighFreqHz', 'LowFreqHz','ClassSpecies')
+colnames(JasperAnno)[c(2,3,4,5)]<-c('FileBeginSec','FileEndSec', 
+                                        'HighFreqHz', 'LowFreqHz')
+JasperAnno$ClassSpecies = JasperAnno$Species
+
+
 JasperAnno$Dep='BarkLeyCanyon'
 
 # Get time
@@ -75,12 +85,17 @@ JasperAnno$AnnotationLevel = 'Call'
 # Add bool for KWs
 AprJenAnno <- AprJenAnno %>%
   mutate(KW =         as.numeric(grepl("KW", sound_id_species)),
-         KW_certain = !as.numeric(grepl("\\?",  sound_id_species)),
          UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z).*", "\\1", filename), 
                           format = "%Y%m%dT%H%M%S.%OSZ", tz='UTC'))
 
+AprJenAnno$KW_certain = NA
+AprJenAnno$KW_certain[AprJenAnno$KW==1]=1
+AprJenAnno$KW_certain[AprJenAnno$KW==1 &
+                        as.numeric(grepl("\\?", AprJenAnno$sound_id_species))]=0
 
-AprJenAnno$KW_certain[]
+AprJenAnno$KW_certain = as.numeric(AprJenAnno$KW_certain)
+AprJenAnno$KW_certain[AprJenAnno$KW==0]<-NA
+
 
 # Add Ecotype 
 AprJenAnno$Ecotype = NA
@@ -118,7 +133,7 @@ AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 'HW?'] = 'HW'
 
 AprJenAnno$ClassSpecies[AprJenAnno$Comments == 'HW'] ='HW'
 
-# Index of ucnertain killer whale calls
+# Index of ucnertain killer whale calls  IN Apr Jenn
 idxUncertainKWcalls = which(AprJenAnno$ClassSpecies== 'KW' & 
                               AprJenAnno$confidence %in% c('Medium', 'm', 'l',
                                                            'Low', 'M', 'L'))
@@ -218,6 +233,7 @@ dayFolderPath = 'E:\\DCLDE2026\\ONC\\Audio\\BarkleyCanyon'
 ONC_anno$FilePath = file.path(dayFolderPath,
                               format(ONC_anno$UTC-seconds(ONC_anno$FileBeginSec), "%Y%m%d"),
                               ONC_anno$Soundfile)
+ONC_anno$AnnotationLevel = 'call'
 
 ONC_anno$FileOk  = file.exists(ONC_anno$FilePath)
 
@@ -231,20 +247,28 @@ ONC_anno$FileUTC =ONC_anno$UTC- seconds(as.numeric(ONC_anno$FileBeginSec))
 # Create a list of the 'not ok files'
 missingData = ONC_anno[ONC_anno$FileOk== FALSE,]
 
+ONC_anno = ONC_anno[!ONC_anno$Soundfile %in% missingData$Soundfile,]
 
-# Ensure all missing files in that list
-missingData$FilesInONClist = missingData$Soundfile %in% JASPERsflist$V1
-
-
-# Now make a new copy of the missing files for the python download
-needandcanget = unique(missingData$Soundfile[missingData$FilesInONClist == TRUE])
-needandcantget = unique(missingData$Soundfile[missingData$FilesInONClist == FALSE])
-
-JASPERsflist$ToDownload = JASPERsflist$V1 %in% needandcanget
-JASPERsflist$MIA = JASPERsflist$V1 %in% needandcantget
-
-ListSub = JASPERsflist[JASPERsflist$ToDownload== TRUE,]
-ListOutstanding = JASPERsflist[JASPERsflist$MIA== TRUE,]
+# 
+# # Ensure all missing files in that list
+# missingData$FilesInONClist = missingData$Soundfile %in% JASPERsflist$V1
+# 
+# 
+# 
+# # All of these files are undtermined biological sounds so we are just going to
+# # cull them
+# 
+# 
+# 
+# # Now make a new copy of the missing files for the python download
+# needandcanget = unique(missingData$Soundfile[missingData$FilesInONClist == TRUE])
+# needandcantget = unique(missingData$Soundfile[missingData$FilesInONClist == FALSE])
+# 
+# JASPERsflist$ToDownload = JASPERsflist$V1 %in% needandcanget
+# JASPERsflist$MIA = JASPERsflist$V1 %in% needandcantget
+# 
+# ListSub = JASPERsflist[JASPERsflist$ToDownload== TRUE,]
+# ListOutstanding = JASPERsflist[JASPERsflist$MIA== TRUE,]
 # 
 # write.csv(ListSub[,c(1:2)], 
 #           'C:\\Users/kaitlin.palmer/Downloads/DownloadListpyMod.csv',
@@ -287,8 +311,14 @@ table(PilkAnno$sound_id_species)
 
 # Add bool for KWs
 PilkAnno <- PilkAnno %>%
-  mutate(KW = as.numeric(grepl("KW", sound_id_species)),
-         KW_certain = as.numeric(grepl("KW?", sound_id_species)))
+  mutate(KW = as.numeric(grepl("KW", sound_id_species)))
+
+PilkAnno$KW_certain= NA
+PilkAnno$KW_certain[PilkAnno$KW==1] =1
+PilkAnno$KW_certain[PilkAnno$KW==1 & 
+                      grepl("//?", PilkAnno$sound_id_species)]<-0
+                                                
+
 
 # Add Ecotype- note uncertain ecotypes getting their own guess
 PilkAnno$Ecotype = as.factor(PilkAnno$kw_ecotype)
@@ -304,7 +334,7 @@ PilkAnno$HighFreqHz = PilkAnno$freq_max
 PilkAnno$UTC = as.POSIXct(PilkAnno$utc, format="%Y-%m-%d %H:%M:%OS", tz = 'UTC')+
   seconds(as.numeric(PilkAnno$utc_ms)/1000)
 
-PilkAnno$Provider = 'DFO_Pilkington'
+PilkAnno$Provider = 'DFO_CRP'
 PilkAnno$ClassSpecies = PilkAnno$sound_id_species
 
 # Clean up the abiotic counds
@@ -353,6 +383,7 @@ PilkAnno$FilePath[NBCidx] =
 
 PilkAnno$FileOk  = file.exists(PilkAnno$FilePath) 
 
+PilkAnno$KW_certain[PilkAnno$ClassSpecies!= 'KW']=NA
 
 DFO_Pilk = PilkAnno[, c(colOut)]
 
@@ -393,10 +424,14 @@ JASCO_malahat <- do.call(rbind, lapply(file_list, function(file) {
 JASCO_malahat <- JASCO_malahat %>%
   mutate(
     KW = as.numeric(grepl("KW", sound_id_species)),
-    KW_certain = !as.numeric(grepl("\\?", sound_id_species)),
     UTC = as.POSIXct(sub(".*(\\d{8}T\\d{6}Z).*", "\\1", filename), 
                      format = "%Y%m%dT%H%M%S", tz= 'UTC')
   )
+
+JASCO_malahat$KW_certain= NA
+JASCO_malahat$KW_certain[JASCO_malahat$KW==1] =1
+JASCO_malahat$KW_certain[JASCO_malahat$KW==1 & 
+                      grepl("//?", JASCO_malahat$sound_id_species)]<-0
 
 JASCO_malahat$UTC = JASCO_malahat$UTC+ 
   seconds(as.numeric(JASCO_malahat$start))
@@ -408,6 +443,8 @@ JASCO_malahat$Ecotype[JASCO_malahat$kw_ecotype == 'SRKW'] ='SRKW'
 JASCO_malahat$Ecotype[JASCO_malahat$kw_ecotype == 'SRKW?'] ='BKW'
 JASCO_malahat$Ecotype[JASCO_malahat$kw_ecotype == 'KWT?'] ='BKW'
 JASCO_malahat$Ecotype[JASCO_malahat$kw_ecotype == 'TKW?'] ='BKW'
+
+JASCO_malahat$KW_certain[JASCO_malahat$ClassSpecies!= 'KW']=0
 
 
 
@@ -498,7 +535,8 @@ DFO_Yurk$ClassSpecies = as.factor(DFO_Yurk$species)
 levels(DFO_Yurk$ClassSpecies)<-c('HW', 'KW', 'KW', 'KW', 'UndBio', 'AB')
 
 DFO_Yurk$KW_certain = ifelse(DFO_Yurk$ClassSpecies== 'KW', 1,0)
-DFO_Yurk$Provider = 'DFO_Yurk'
+DFO_Yurk$KW_certain[DFO_Yurk$ClassSpecies != 'KW'] = NA  
+DFO_Yurk$Provider = 'DFO_WDA'
 
 
 DFO_Yurk$AnnotationLevel = 'Detection'
@@ -555,7 +593,7 @@ Viersanno$UTC <-
   with(Viersanno, as.POSIXct(DateTime, tz = "America/Los_Angeles", 
                              format = "%m/%d/%Y %H:%M:%S"))
 
-# Problem children
+# Problem children- different bloody start times
 problemData = unique(Viersanno$dataset[is.na(Viersanno$UTC)])
 problemIdx = which(is.na(Viersanno$UTC))
   
@@ -571,7 +609,7 @@ Viersanno$ClassSpecies[Viersanno$ClassSpecies == 'Noise'] = 'AB'
 
 Viersanno$Provider = 'OrcaSound'
 Viersanno$KW = ifelse(Viersanno$ClassSpecies== 'KW',1,0)
-Viersanno$KW_certain = ifelse(Viersanno$ClassSpecies== 'KW',1,0)
+Viersanno$KW_certain = ifelse(Viersanno$ClassSpecies== 'KW',1,NA)
 Viersanno$Dep = Viersanno$location
 Viersanno$Soundfile = Viersanno$wav_filename
 Viersanno$LowFreqHz =NaN
@@ -590,6 +628,10 @@ Viersanno$FilePath =
   file.path(dayFolderPath,Viersanno$Soundfile)
 
 Viersanno$FileOk  = file.exists(Viersanno$FilePath) 
+
+Viersanno[Viersanno$AnnotationLevel=='File', 
+          c('FileBeginSec', 'FileEndSec',
+            'UTC', 'LowFreqHz', 'HighFreqHz')]= NA
 
 Viersanno = Viersanno[,c(colOut)]
 
@@ -620,8 +662,10 @@ SIMRES <- do.call(rbind, lapply(file_list, function(file) {
 SIMRES = SIMRES[!is.na(SIMRES$Selection),]
 
 SIMRES$ClassSpecies = as.factor(SIMRES$Sound.ID.Species)
-SIMRES$KW_certain =  as.numeric(grepl("KW", SIMRES$Sound.ID.Species))
-levels(SIMRES$ClassSpecies)<-c(NA, 'UndBio','KW',  'KW', 'UndBio')
+levels(SIMRES$ClassSpecies)<-c('AB', 'UndBio','KW',  'KW', 'KW')
+
+
+
 
 #check SIMRES files in UTC
 SIMRES$UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z)_.*", "\\1", 
@@ -631,7 +675,19 @@ SIMRES$UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z)_.*", "\\1",
 
 SIMRES$Ecotype = as.factor(SIMRES$KW.Ecotype)
 levels(SIMRES$Ecotype)<- c(NA, NA, 'SRKW', 'SRKW')
-SIMRES$KW = ifelse(SIMRES$ClassSpecies == 'KW', 1,0)
+
+SIMRES$KW =as.numeric(grepl("KW", SIMRES$Sound.ID.Species))
+
+SIMRES$KW_certain = NA
+SIMRES$KW_certain[SIMRES$KW ==1] =1
+SIMRES$KW_certain[SIMRES$Confidence %in% c('low')]=0
+
+SIMRES$KW_certain= NA
+SIMRES$KW_certain[SIMRES$KW==1] =1
+SIMRES$KW_certain[SIMRES$KW==1 & 
+                    grepl("\\?", SIMRES$Sound.ID.Species)]<-0
+
+
 
 SIMRES$Soundfile = SIMRES$Begin.File
 SIMRES$Dep = 'Tekteksen'
