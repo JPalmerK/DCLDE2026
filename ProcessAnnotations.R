@@ -33,7 +33,7 @@ AnnotationLevelList = c('File', 'Detection', 'Call')
 
 # Jasper, April, and Jenn have all annotated thse files. There is some overla
 JasperAnno = read.csv('E:\\DCLDE2026/ONC/Annotations/BarkleyCanyonAnnotations_Public_Final.csv')
-AprJenAnno = read.csv('E:\\DCLDE2026/ONC/Annotations/jen_onc_barkley-canyon_annot.csv')
+#AprJenAnno = read.csv('E:\\DCLDE2026/ONC/Annotations/jen_onc_barkley-canyon_annot.csv')
 
 
 JASPERsflist = read.csv('C:\\Users/kaitlin.palmer/Downloads/DownloadListpy (2).csv',
@@ -82,75 +82,77 @@ JasperAnno$ClassSpecies[!JasperAnno$ClassSpecies %in% ClassSpeciesList] = 'UndBi
 JasperAnno$Provider= 'ONC'
 JasperAnno$AnnotationLevel = 'Call'
 
-# Add bool for KWs
-AprJenAnno <- AprJenAnno %>%
-  mutate(KW =         as.numeric(grepl("KW", sound_id_species)),
-         UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z).*", "\\1", filename), 
-                          format = "%Y%m%dT%H%M%S.%OSZ", tz='UTC'))
-
-AprJenAnno$KW_certain = NA
-AprJenAnno$KW_certain[AprJenAnno$KW==1]=1
-AprJenAnno$KW_certain[AprJenAnno$KW==1 &
-                        as.numeric(grepl("\\?", AprJenAnno$sound_id_species))]=0
-
-AprJenAnno$KW_certain = as.numeric(AprJenAnno$KW_certain)
-AprJenAnno$KW_certain[AprJenAnno$KW==0]<-NA
-
-
-# Add Ecotype 
-AprJenAnno$Ecotype = NA
-AprJenAnno$Ecotype[AprJenAnno$kw_ecotype == 'KWSR'] ='SRKW'
-AprJenAnno$Ecotype[AprJenAnno$kw_ecotype == 'KWT'] ='BKW'
-AprJenAnno$Ecotype[AprJenAnno$kw_ecotype == 'KWT?'] ='BKW'
-
-
-colnames(AprJenAnno)[c(1,2,3,4,5)]<-c('LowFreqHz','HighFreqHz','FileEndSec',
-                                        'FileBeginSec','Soundfile')
-
-AprJenAnno$ClassSpecies = AprJenAnno$sound_id_species
-
-
-AprJenAnno$UTC = AprJenAnno$UTC+ seconds(as.numeric(AprJenAnno$FileBeginSec))
-
-AprJenAnno$Dep='BarkLeyCanyon'
-# Set humpbacks
-
-# Undetermined biotic sounds
-AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 
-                          c("KW?/PWSD?",  "Echolocation",
-                            "Echolocation?", "KW/PWSD?","PWSD?",
-                            "PWSD/KW?", "PWSD", "PWSD?", "KW/PWSD?",
-                            "Odontocete", "Odontocete?")] = 'UndBio'
-
-# Probably abitoic sounds
-AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 
-                          c("Unknown", "Vessel Noise","Vessel noise",
-                            "Unknown ", "Vessel Noise?", "unknown",
-                            "Mooring", "Vessel noise?", "Uknown", "")]= 'AB'
-AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 'KW?'] = 'KW'
-AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 'HW?'] = 'HW'
-
-
-AprJenAnno$ClassSpecies[AprJenAnno$Comments == 'HW'] ='HW'
-
-# Index of ucnertain killer whale calls  IN Apr Jenn
-idxUncertainKWcalls = which(AprJenAnno$ClassSpecies== 'KW' & 
-                              AprJenAnno$confidence %in% c('Medium', 'm', 'l',
-                                                           'Low', 'M', 'L'))
-AprJenAnno$KW_certain[idxUncertainKWcalls]<-FALSE
-AprJenAnno$KW_certain[AprJenAnno$ClassSpecies != 'KW']= FALSE
-
-AprJenAnno$Provider = 'ONC_HALLO' # I think HALLO paid for JASCO's annotations
-
-AprJenAnno$AnnotationLevel = 'Call'
-
- 
-AprJenAnno$Annotater = 'AprJen'
-JasperAnno$Annotater = 'Jasper'
+# # Add bool for KWs
+# AprJenAnno <- AprJenAnno %>%
+#   mutate(KW =         as.numeric(grepl("KW", sound_id_species)),
+#          UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z).*", "\\1", filename), 
+#                           format = "%Y%m%dT%H%M%S.%OSZ", tz='UTC'))
+# 
+# AprJenAnno$KW_certain = NA
+# AprJenAnno$KW_certain[AprJenAnno$KW==1]=1
+# AprJenAnno$KW_certain[AprJenAnno$KW==1 &
+#                         as.numeric(grepl("\\?", AprJenAnno$sound_id_species))]=0
+# 
+# AprJenAnno$KW_certain = as.numeric(AprJenAnno$KW_certain)
+# AprJenAnno$KW_certain[AprJenAnno$KW==0]<-NA
+# 
+# 
+# # Add Ecotype 
+# AprJenAnno$Ecotype = NA
+# AprJenAnno$Ecotype[AprJenAnno$kw_ecotype == 'KWSR'] ='SRKW'
+# AprJenAnno$Ecotype[AprJenAnno$kw_ecotype == 'KWT'] ='BKW'
+# AprJenAnno$Ecotype[AprJenAnno$kw_ecotype == 'KWT?'] ='BKW'
+# 
+# 
+# colnames(AprJenAnno)[c(1,2,3,4,5)]<-c('LowFreqHz','HighFreqHz','FileEndSec',
+#                                         'FileBeginSec','Soundfile')
+# 
+# AprJenAnno$ClassSpecies = AprJenAnno$sound_id_species
+# 
+# 
+# AprJenAnno$UTC = AprJenAnno$UTC+ seconds(as.numeric(AprJenAnno$FileBeginSec))
+# 
+# AprJenAnno$Dep='BarkLeyCanyon'
+# # Set humpbacks
+# 
+# # Undetermined biotic sounds
+# AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 
+#                           c("KW?/PWSD?",  "Echolocation",
+#                             "Echolocation?", "KW/PWSD?","PWSD?",
+#                             "PWSD/KW?", "PWSD", "PWSD?", "KW/PWSD?",
+#                             "Odontocete", "Odontocete?")] = 'UndBio'
+# 
+# # Probably abitoic sounds
+# AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 
+#                           c("Unknown", "Vessel Noise","Vessel noise",
+#                             "Unknown ", "Vessel Noise?", "unknown",
+#                             "Mooring", "Vessel noise?", "Uknown", "")]= 'AB'
+# AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 'KW?'] = 'KW'
+# AprJenAnno$ClassSpecies[AprJenAnno$ClassSpecies %in% 'HW?'] = 'HW'
+# 
+# 
+# AprJenAnno$ClassSpecies[AprJenAnno$Comments == 'HW'] ='HW'
+# 
+# # Index of ucnertain killer whale calls  IN Apr Jenn
+# idxUncertainKWcalls = which(AprJenAnno$ClassSpecies== 'KW' & 
+#                               AprJenAnno$confidence %in% c('Medium', 'm', 'l',
+#                                                            'Low', 'M', 'L'))
+# AprJenAnno$KW_certain[idxUncertainKWcalls]<-FALSE
+# AprJenAnno$KW_certain[AprJenAnno$ClassSpecies != 'KW']= FALSE
+# 
+# AprJenAnno$Provider = 'ONC_HALLO' # I think HALLO paid for JASCO's annotations
+# 
+# AprJenAnno$AnnotationLevel = 'Call'
+# 
+#  
+# AprJenAnno$Annotater = 'AprJen'
+# JasperAnno$Annotater = 'Jasper'
 
 
 ONC_anno = rbind(AprJenAnno[, c(colOut[1:12], 'Annotater')],
                  JasperAnno[,  c(colOut[1:12], 'Annotater')])
+
+ONC_anno = rbind(JasperAnno[,  c(colOut[1:12], 'Annotater')])
 
 
 ONC_anno$dur = as.numeric(ONC_anno$FileEndSec)  - 
@@ -398,10 +400,25 @@ PilkAnno <- PilkAnno %>%
 
 rm(list= c('PilkAnno1', 'PilkAnno2', 'PilkAnno'))
 
-
-
-
-
+# 
+# # List which files are not in annotations list
+# audio.files = data.frame(
+#   filename = list.files('E:\\DCLDE2026\\DFO_Pilkington\\Audio\\',
+#            pattern ='.flac', recursive = TRUE, include.dirs = TRUE))
+# audio.files$Soundfile =basename(audio.files$filename)
+# audio.files$fullfile = paste0('E:\\DCLDE2026\\DFO_Pilkington\\Audio\\', audio.files$Soundfile )
+# PilkAnno = merge(audio.files, DFO_Pilk, by ='Soundfile', all.x = TRUE)
+# 
+# PilkAnno$keep = PilkAnno$Soundfile %in% DFO_Pilk$Soundfile
+# 
+# # keep the file after all the start files, just incase
+# idxExtraKeep = which(PilkAnno$keep ==TRUE)
+# 
+# PilkAnno$keep[idxExtraKeep+1] = TRUE
+# 
+# # Remove files without annotations
+# filesRm = PilkAnno[PilkAnno$keep == FALSE,]
+# file.remove(filesRm$fullfile)
 ##############################################################################
 # JASCO- Malahat
 
@@ -490,6 +507,24 @@ JASCO_malahat$FileOk  = file.exists(JASCO_malahat$FilePath)
 JASCO_malahat = JASCO_malahat[,c(colOut)]
 
 
+# List which files are not in annotations list
+audio.files = data.frame(
+  filename = list.files('E:\\DCLDE2026\\JASCO/Audio/',
+           pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
+audio.files$Soundfile =basename(audio.files$filename)
+
+JASCO = merge(audio.files, JASCO_malahat, by ='Soundfile', all.x = TRUE)
+
+JASCO$keep = JASCO$Soundfile %in% JASCO_malahat$Soundfile
+
+# keep the file after all the start files, just incase
+idxExtraKeep = which(JASCO$keep ==TRUE)
+
+JASCO$keep[idxExtraKeep+1] = TRUE
+
+# Remove files without annotations
+filesRm = PilkAnno[PilkAnno$keep == FALSE,]
+file.remove(filesRm$filename)
 
 ############################################################################
 # DFO Yurk
