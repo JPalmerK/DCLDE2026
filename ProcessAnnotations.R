@@ -12,6 +12,8 @@ library(dplyr)
 # 3) DFO Pilkington
 # 4) DFO Yurk
 # 5) SMRU
+# 6) VPFA
+# 7) Scripps
 
 ############################################################################
 # Final output column names
@@ -700,8 +702,6 @@ SIMRES$ClassSpecies = as.factor(SIMRES$Sound.ID.Species)
 levels(SIMRES$ClassSpecies)<-c('AB', 'UndBio','KW',  'KW', 'KW')
 
 
-
-
 #check SIMRES files in UTC
 SIMRES$UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z)_.*", "\\1", 
                             SIMRES$Begin.File[1]),  
@@ -756,9 +756,339 @@ SIMRES$FileOk  = file.exists(SIMRES$FilePath)
 
 SIMRES= SIMRES[, colOut]
 
+
+############################################################################
+# VFPA - JASCO Strait of Georgia (Roberts Bank in Globus)
+############################################################################
+
+# Strait fo Georgia
+VPFA_SoG<- read.csv('D:\\VFPA/Annotations/annot_RB_man_det.csv')
+
+VPFA_SoG <- VPFA_SoG %>%
+  mutate(
+    KW = as.numeric(grepl("KW", sound_id_species)),
+    UTC = as.POSIXct(sub(".*(\\d{8}T\\d{6}.\\d{3}Z).*", "\\1", filename), 
+                     format = "%Y%m%dT%H%M%S", tz= 'UTC')
+  )
+
+
+VPFA_SoG$KW_certain= NA
+VPFA_SoG$KW_certain[VPFA_SoG$KW==1] =1
+VPFA_SoG$KW_certain[VPFA_SoG$KW==1 & 
+                           grepl("\\?", VPFA_SoG$sound_id_species)]<-0
+
+VPFA_SoG$UTC = VPFA_SoG$UTC+ 
+  seconds(as.numeric(VPFA_SoG$start))
+
+# Add Ecotype 
+VPFA_SoG$Ecotype = NA
+VPFA_SoG$Ecotype[VPFA_SoG$kw_ecotype == 'SRKW'] ='SRKW'
+VPFA_SoG$Ecotype[VPFA_SoG$kw_ecotype == 'SRKW?'] ='SRKW'
+VPFA_SoG$Ecotype[VPFA_SoG$kw_ecotype == 'KWT?'] ='BKW'
+VPFA_SoG$Ecotype[VPFA_SoG$kw_ecotype == 'TKW?'] ='BKW'
+
+
+colnames(VPFA_SoG)[c(5,6,3,4,1)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
+                                           'FileEndSec', 'Soundfile')
+
+VPFA_SoG$ClassSpecies<- VPFA_SoG$sound_id_species
+
+
+VPFA_SoG$ClassSpecies[VPFA_SoG$ClassSpecies == 'KW?'] ='KW'
+VPFA_SoG$ClassSpecies[VPFA_SoG$ClassSpecies %in% 
+                             c("HW/KW?", "HW?")]= 'HW'
+
+VPFA_SoG$ClassSpecies[VPFA_SoG$ClassSpecies %in% 
+                             c("Vessel Noise", "Vessel Noise?",  "Noise", 
+                               "Sonar","UN")]= 'AB'
+
+VPFA_SoG$ClassSpecies[VPFA_SoG$ClassSpecies %in% 
+                             c("KW/PWSD?", "PWSD","FS")]= 'UndBio'
+
+VPFA_SoG$AnnotationLevel = 'Call'
+
+VPFA_SoG$dur = VPFA_SoG$FileEndSec-VPFA_SoG$FileBeginSec
+
+VPFA_SoG$end_time = VPFA_SoG$UTC+ seconds(VPFA_SoG$dur)
+
+VPFA_SoG$Dep='StraitofGeorgia'
+VPFA_SoG$Provider = 'JASCO_VFPA'
+
+# Sort and then identify overlaps
+VPFA_SoG <- VPFA_SoG %>%
+  arrange(Dep,UTC) %>%
+  mutate(overlap = lead(UTC) <= lag(end_time, default = first(end_time)))
+
+
+# List which files are not in annotations list
+audio.files = data.frame(
+  filename = list.files('D:\\VFPA/StraitofGeorgia_Globus-RobertsBank/',
+                        pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
+audio.files$Soundfile =basename(audio.files$filename)
+
+# Make sure all audio files are present for all annotations
+if (all(VPFA_SoG$Soundfile %in% audio.files$Soundfile)){
+  print('All data present for annogations')
+}else{
+  print('Missing data')
+  VPFA_SoG$Soundfile[which(!VPFA_SoG$Soundfile %in% audio.files$Soundfile)]
+}
+
+VPFA_SoG$FilePath = paste0('VFPA/StraitofGeorgia_Globus-RobertsBank/',VPFA_SoG$Soundfile)
+
+# 
+# 
+# JASCO = merge(audio.files, VPFA_SoG, by ='Soundfile', all.x = TRUE, all.y = FALSE)
+# JASCO$keep = JASCO$Soundfile %in% VPFA_SoG$Soundfile
+# 
+# # keep the file after all the start files, just incase
+# idxKeep = which(JASCO$keep)
+# idxKeepall = unique(c(idxKeep-1, idxKeep, idxKeep+1))
+# JASCO$keep[idxKeepall] = TRUE
+# 
+# # 
+# # # Remove files without annotations
+# # filesRm = JASCO$[JASCO$keep == FALSE,]
+# # file.remove(JASCO$filesRm)
+# # 
+# # # Remove files without annotations
+# # filesRm = PilkAnno[PilkAnno$keep == FALSE,]
+# # file.remove(filesRm$filename)
+
+############################################################################
+# VFPA - JASCO Boundary Pass
+############################################################################
+
+
+# Boundary Pass
+VPFA_BoundaryPass<- read.csv('D:\\VFPA/Annotations/annot_BP_man_det.csv')
+VPFA_BoundaryPass <- VPFA_BoundaryPass %>%
+  mutate(
+    KW = as.numeric(grepl("KW", sound_id_species)),
+    UTC = as.POSIXct(sub(".*(\\d{8}T\\d{6}Z).*", "\\1", filename), 
+                     format = "%Y%m%dT%H%M%S", tz= 'UTC')
+  )
+
+VPFA_BoundaryPass$KW_certain= NA
+VPFA_BoundaryPass$KW_certain[VPFA_BoundaryPass$KW==1] =1
+
+# Remove 'duplicate' and 'repeat' annotations
+VPFA_BoundaryPass= VPFA_BoundaryPass[
+  !VPFA_BoundaryPass$sound_id_species %in% c('Repeat', 'Duplicate'),]
+
+UncertainKWidx = which(VPFA_BoundaryPass$KW==1 & 
+                         grepl("\\?", VPFA_BoundaryPass$sound_id_species))
+VPFA_BoundaryPass$KW_certain[UncertainKWidx]=0
+
+# Get time in UTC
+VPFA_BoundaryPass$UTC = VPFA_BoundaryPass$UTC+ 
+  seconds(as.numeric(VPFA_BoundaryPass$start))
+
+# Add Ecotype 
+VPFA_BoundaryPass$Ecotype = NA
+VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'SRKW'] ='SRKW'
+VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'SRKW?'] ='SRKW'
+VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'KWT?'] ='BKW'
+VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'TKW?'] ='BKW'
+VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'TKW'] ='BKW'
+
+
+
+colnames(VPFA_BoundaryPass)[c(5,6,3,4,1)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
+                                    'FileEndSec', 'Soundfile')
+
+VPFA_BoundaryPass$ClassSpecies<- VPFA_BoundaryPass$sound_id_species
+
+
+VPFA_BoundaryPass$ClassSpecies[VPFA_BoundaryPass$ClassSpecies == 'KW?'] ='KW'
+VPFA_BoundaryPass$ClassSpecies[VPFA_BoundaryPass$ClassSpecies %in% 
+                        c("HW/KW?",  "KW/HW?", "HW?")]= 'HW'
+
+VPFA_BoundaryPass$ClassSpecies[VPFA_BoundaryPass$ClassSpecies %in% 
+                        c("Vessel Noise", "Vessel Noise?",  "Noise", 
+                          "Sonar","UN", "NN", "BACKGROUND", 'UNK')]= 'AB'
+
+VPFA_BoundaryPass$ClassSpecies[VPFA_BoundaryPass$ClassSpecies %in% 
+                        c("KW/PWSD?", "PWSD","FS",  "PWSD?")]= 'UndBio'
+
+VPFA_BoundaryPass$AnnotationLevel = 'Call'
+VPFA_BoundaryPass$dur = VPFA_BoundaryPass$FileEndSec-VPFA_BoundaryPass$FileBeginSec
+VPFA_BoundaryPass$end_time = VPFA_BoundaryPass$UTC+ seconds(VPFA_BoundaryPass$dur)
+VPFA_BoundaryPass$Dep='BoundaryPass'
+VPFA_BoundaryPass$Provider = 'JASCO_VFPA'
+
+
+
+# List which files are not in annotations list
+audio.files = data.frame(
+  filename = list.files('D:\\VFPA/BoundaryPass/',
+                        pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
+audio.files$Soundfile =basename(audio.files$filename)
+
+# Make sure all audio files are present for all annotations
+if (all(VPFA_BoundaryPass$Soundfile %in% audio.files$Soundfile)){
+  print('All data present for annogations')
+}else{
+  print('Missing data')
+  VPFA_BoundaryPass$Soundfile[which(!VPFA_BoundaryPass$Soundfile %in% audio.files$Soundfile)]
+}
+
+VPFA_BoundaryPass$FilePath = paste0('VFPA/BoundaryPass/',VPFA_BoundaryPass$Soundfile)
+
+############################################################################
+# VFPA - JASCO Haro Strait North
+############################################################################
+
+
+# Haro Strait North
+VPFA_HaroNB<- read.csv('D:\\VFPA/Annotations/annot_VFPA-HaroStrait-NB_SM_coarse.csv')
+VPFA_HaroNB <- VPFA_HaroNB %>%
+  mutate(
+    KW = as.numeric(grepl("KW", sound_id_species)),
+    UTC = as.POSIXct(sub(".*(\\d{8}T\\d{6}Z).*", "\\1", filename), 
+                     format = "%Y%m%dT%H%M%S", tz= 'UTC')
+  )
+
+VPFA_HaroNB$KW_certain= NA
+VPFA_HaroNB$KW_certain[VPFA_HaroNB$KW==1] =1
+
+UncertainKWidx = which(VPFA_HaroNB$KW==1 & 
+                         grepl("\\?", VPFA_HaroNB$sound_id_species))
+VPFA_HaroNB$KW_certain[UncertainKWidx]=0
+
+# Get time in UTC
+VPFA_HaroNB$UTC = VPFA_HaroNB$UTC+ 
+  seconds(as.numeric(VPFA_HaroNB$start))
+
+# Add Ecotype 
+VPFA_HaroNB$Ecotype = NA
+VPFA_HaroNB$Ecotype[VPFA_HaroNB$kw_ecotype == 'SRKW'] ='SRKW'
+VPFA_HaroNB$Ecotype[VPFA_HaroNB$kw_ecotype == 'SRKW?'] ='SRKW'
+VPFA_HaroNB$Ecotype[VPFA_HaroNB$kw_ecotype == 'KWT?'] ='BKW'
+VPFA_HaroNB$Ecotype[VPFA_HaroNB$kw_ecotype == 'TKW?'] ='BKW'
+
+
+
+colnames(VPFA_HaroNB)[c(5,6,3,4,1)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
+                                             'FileEndSec', 'Soundfile')
+
+VPFA_HaroNB$ClassSpecies<- VPFA_HaroNB$sound_id_species
+
+
+VPFA_HaroNB$ClassSpecies[VPFA_HaroNB$ClassSpecies == 'KW?'] ='KW'
+VPFA_HaroNB$ClassSpecies[VPFA_HaroNB$ClassSpecies %in% 
+                                 c("HW/KW?", "HW?")]= 'HW'
+
+VPFA_HaroNB$ClassSpecies[VPFA_HaroNB$ClassSpecies %in% 
+                                 c("Vessel Noise", "Vessel Noise?",  "Noise", 
+                                   "Sonar","UN", "BELL","VESSEL", "UNK")]= 'AB'
+
+VPFA_HaroNB$ClassSpecies[VPFA_HaroNB$ClassSpecies %in% 
+                                 c("KW/PWSD?", "PWSD","FS")]= 'UndBio'
+
+VPFA_HaroNB$AnnotationLevel = 'Call'
+VPFA_HaroNB$dur = VPFA_HaroNB$FileEndSec-VPFA_HaroNB$FileBeginSec
+VPFA_HaroNB$end_time = VPFA_HaroNB$UTC+ seconds(VPFA_HaroNB$dur)
+VPFA_HaroNB$Dep='HaroStraitNorth'
+VPFA_HaroNB$Provider = 'JASCO_VFPA'
+
+
+
+# List which files are not in annotations list
+audio.files = data.frame(
+  filename = list.files('D:\\VFPA/VFPA-HaroStrait-NB/',
+                        pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
+audio.files$Soundfile =basename(audio.files$filename)
+
+# Make sure all audio files are present for all annotations
+if (all(VPFA_HaroNB$Soundfile %in% audio.files$Soundfile)){
+  print('All data present for annogations')
+  VPFA_HaroNB$FileOk=1
+}else{
+  print('Missing data')
+  VPFA_HaroNB$Soundfile[which(!VPFA_HaroNB$Soundfile %in% audio.files$Soundfile)]
+}
+
+VPFA_HaroNB$FilePath = paste0('VFPA/VFPA-HaroStrait-NB/',VPFA_HaroNB$Soundfile)
+
+############################################################################
+# VFPA - JASCO Haro Strait South
+############################################################################
+
+# Haro Strait South
+VPFA_HaroSB<- read.csv('D:\\VFPA/Annotations/annot_VFPA-HaroStrait-SB_SM_coarse.csv')
+VPFA_HaroSB <- VPFA_HaroSB %>%
+  mutate(
+    KW = as.numeric(grepl("KW", sound_id_species)),
+    UTC = as.POSIXct(sub(".*(\\d{8}T\\d{6}Z).*", "\\1", filename), 
+                     format = "%Y%m%dT%H%M%S", tz= 'UTC')
+  )
+
+VPFA_HaroSB$KW_certain= NA
+VPFA_HaroSB$KW_certain[VPFA_HaroSB$KW==1] =1
+
+UncertainKWidx = which(VPFA_HaroSB$KW==1 & 
+                         grepl("\\?", VPFA_HaroSB$sound_id_species))
+VPFA_HaroSB$KW_certain[UncertainKWidx]=0
+
+# Get time in UTC
+VPFA_HaroSB$UTC = VPFA_HaroSB$UTC+ 
+  seconds(as.numeric(VPFA_HaroSB$start))
+
+# Add Ecotype 
+VPFA_HaroSB$Ecotype = NA
+VPFA_HaroSB$Ecotype[VPFA_HaroSB$kw_ecotype == 'SRKW'] ='SRKW'
+VPFA_HaroSB$Ecotype[VPFA_HaroSB$kw_ecotype == 'SRKW?'] ='SRKW'
+VPFA_HaroSB$Ecotype[VPFA_HaroSB$kw_ecotype == 'KWT?'] ='BKW'
+VPFA_HaroSB$Ecotype[VPFA_HaroSB$kw_ecotype == 'TKW?'] ='BKW'
+
+
+colnames(VPFA_HaroSB)[c(5,6,3,4,1)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
+                                        'FileEndSec', 'Soundfile')
+
+VPFA_HaroSB$ClassSpecies<- VPFA_HaroSB$sound_id_species
+
+
+VPFA_HaroSB$ClassSpecies[VPFA_HaroSB$ClassSpecies == 'KW?'] ='KW'
+VPFA_HaroSB$ClassSpecies[VPFA_HaroSB$ClassSpecies %in% 
+                            c("HW/KW?", "HW?")]= 'HW'
+
+VPFA_HaroSB$ClassSpecies[VPFA_HaroSB$ClassSpecies %in% 
+                            c("Vessel Noise", "Vessel Noise?",  "Noise", 
+                              "Sonar","UN", "BELL", "VESSEL", 'UNK')]= 'AB'
+
+VPFA_HaroSB$ClassSpecies[VPFA_HaroSB$ClassSpecies %in% 
+                            c("KW/PWSD?", "PWSD","FS")]= 'UndBio'
+
+VPFA_HaroSB$AnnotationLevel = 'Call'
+VPFA_HaroSB$dur = VPFA_HaroSB$FileEndSec-VPFA_HaroSB$FileBeginSec
+VPFA_HaroSB$end_time = VPFA_HaroSB$UTC+ seconds(VPFA_HaroSB$dur)
+VPFA_HaroSB$Dep='HaroStraitSouth'
+VPFA_HaroSB$Provider = 'JASCO_VFPA'
+
+
+
+# List which files are not in annotations list
+audio.files = data.frame(
+  filename = list.files('D:\\VFPA/VFPA-HaroStrait-SB/',
+                        pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
+audio.files$Soundfile =basename(audio.files$filename)
+
+# Make sure all audio files are present for all annotations
+if (all(VPFA_HaroSB$Soundfile %in% audio.files$Soundfile)){
+  print('All data present for annogations')
+}else{
+  print('Missing data')
+  VPFA_HaroSB$Soundfile[which(!VPFA_HaroSB$Soundfile %in% audio.files$Soundfile)]
+}
+
+
+
+
+
 #############################################################################
 
-allAnno = rbind(DFO_Pilk, ONC_anno[, colOut], JASCO_malahat, Viersanno, DFO_Yurk, SIMRES)
+allAnno = rbind(DFO_Pilk, ONC_anno[, colOut], Viersanno, DFO_Yurk, SIMRES)
 
 # overall annotations
 table(allAnno$ClassSpecies)
