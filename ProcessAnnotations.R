@@ -704,7 +704,7 @@ levels(SIMRES$ClassSpecies)<-c('AB', 'UndBio','KW',  'KW', 'KW')
 
 #check SIMRES files in UTC
 SIMRES$UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z)_.*", "\\1", 
-                            SIMRES$Begin.File[1]),  
+                            SIMRES$Begin.File),  
                         format = "%Y%m%dT%H%M%S.%OSZ",
                         tz = 'UTC')+seconds(SIMRES$File.Offset..s.)
 
@@ -1083,9 +1083,63 @@ if (all(VPFA_HaroSB$Soundfile %in% audio.files$Soundfile)){
 }
 
 
+###########################################################################
+# SCRIPPS
+############################################################################
+
+
+# Get a list of files matching the pattern 'annot_Malahat'
+file_list <- list.files(path = 'D:\\Scripps\\Annoations', 
+                        pattern = '*txt', full.names = TRUE)
+
+
+# Read and concatenate the CSV files with filename as a separate column (if non-empty)
+scripps <- do.call(rbind, lapply(file_list, function(file) {
+  data <- read.table(file, header = TRUE, sep = '\t')
+  if (nrow(data) > 0) {
+    data$Dep <- as.factor(basename(file))  # Add filename as a new column
+    return(data)
+  } else {
+    return(NULL)  # Return NULL for empty data frames
+  }
+}))
 
 
 
+# Cape Elizabeth and Quinault Canyon
+levels(scripps$Dep)<-c("Cpe_Elz", "Quin_Can")
+
+# Set the initial ecotypes then match the format
+scripps$Ecotype <- as.factor(gsub(".*_(.*)\\.wav", "\\1", scripps$Begin.File))
+levels(scripps$Ecotype)<-c('BKW', 'BKW', 'BKW', 'BKW', 'OKW', 'SRKW',
+                           'SRKW','BKW', 'BKW')
+scripps$Ecotype[scripps$ClassSpecies != ""]<- NaN
+
+scripps$ClassSpecies= as.factor(scripps$ClassSpecies)
+levels(scripps$ClassSpecies)<-c('KW', 'AB', 'AB', 'HW', 'KW')
+
+scripps$KW = ifelse(scripps$ClassSpecies=='KW',1,0)
+scripps$KW_certain = ifelse(scripps$ClassSpecies=='KW',1,NA)
+
+scripps$Soundfile = scripps$Begin.File
+scripps$LowFreqHz = scripps$Low.Freq..Hz.
+scripps$HighFreqHz = scripps$Low.Freq..Hz.
+scripps$FileBeginSec = scripps$Beg.File.Samp..samples./200000
+scripps$FileEndSec = scripps$FileBeginSec+(scripps$End.Time..s.- scripps$Begin.Time..s)
+scripps$Provider = 'SIO'
+scripps$AnnotationLevel = 'Call'
+scripps$FilePath = scripps$Begin.Path
+
+
+#check SIMRES files in UTC
+scripps$UTC = as.POSIXct(sub(".*_(\\d{6}_\\d{6})_.*", "\\1",
+                             scripps$Begin.File),  
+                        format = "%y%m%d_%H%M%S",
+                        tz = 'UTC')
+scripps$FileOk=1
+
+
+xx
 #############################################################################
 
 allAnno = rbind(DFO_Pilk, ONC_anno[, colOut], Viersanno, DFO_Yurk, SIMRES)
