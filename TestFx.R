@@ -6,7 +6,7 @@
 # 4, KW certain should be NA for all non-KW classes in classspecies
 # 5, KW certain should be TRUE or FALSE for all kw classspecies or KW ==1
 
-runTests<-function(annotationsDf, EcotypeList){
+runTests<-function(annotationsDf, EcotypeList, ClassSpeciesList){
   
   #1- KW class for class species 1 in KW column
   if(all(annotationsDf$KW[annotationsDf$ClassSpecies == 'KW']== 1)){ 
@@ -28,11 +28,17 @@ runTests<-function(annotationsDf, EcotypeList){
   
   
   #2, KW ecotype should be NA for all non-killer whale detections
-  if(all(is.na(annotationsDf$Ecotype[annotationsDf$KW == 0]))){
-    print('All ecotypes for on kw set to NA')
-  }else{
+  notKW= which(annotationsDf$KW==0)
+  withEcotypes = which(!is.na(annotationsDf$Ecotype))
+  value = intersect(notKW, withEcotypes)
+  
+  
+  if(length(value>1)){
     print('Issue with ecotypes. Ecotypes assigned for non-killer whale annotations')
-    print(paste('see', as.character(which(!is.na(annotationsDf$Ecotype[annotationsDf$KW == 0])))))
+    print(paste('see', as.character(value)))
+    
+  }else{
+    print('All ecotypes for on kw set to NA')
   }
   
   # 3, where there is a KW ecotype, KW should be 1 and class should be KW
@@ -41,7 +47,6 @@ runTests<-function(annotationsDf, EcotypeList){
   }else{
     print(paste('Issue with KW class labesl. Non ecotypes listed as 0, see',
     as.character(which(annotationsDf$KW[annotationsDf$Ecotype %in% EcotypeList]!=1))))
-    
   }
   
   # 4, KW certain should be NA for all non-KW classes in classspecies
@@ -72,5 +77,37 @@ runTests<-function(annotationsDf, EcotypeList){
   if(any(is.na(annotationsDf$UTC))){print('Na values found in UTC')}else{
     print('UTC checked')
   }
+  
+  # Check that there only classes in the class species
+  classLevels = unique(annotationsDf$ClassSpecies)
+  
+  if(any(!classLevels %in% ClassSpeciesList)){
+    problem = classLevels[(!classLevels %in% ClassSpeciesList)]
+    print(paste(problem, 'found in ClassSpecies column'))
+  }
+  
+  
+  # Check that there only classes in the class species
+  classLevels = unique(annotationsDf$Ecotype)
+  
+  if(any(!classLevels %in% c(NA, EcotypeList))){
+    problem = classLevels[(!classLevels %in% c(NA, EcotypeList))]
+    print(paste(problem, 'found in Ecotype column'))
+  }
+  
+  
+  #if(all(unique(annotationsDf$)))
+  
+  
+  #7) Check that all annotations with an ecotype are tagged as KW in the KW
+  # column as well as KW in the class/species
+  
+  values = unique(annotationsDf$ClassSpecies[!is.na(annotationsDf$Ecotype)])
+  if(any(values != 'KW')){print('annotations tagged with ecotypes are assigneed to non KW class')}
+  
+  values = unique(annotationsDf$KW[!is.na(annotationsDf$Ecotype)])
+  if(any(values != 1)){print('annotations tagged with ecotypes are assigned to KW')}
+  
+  
   
 }

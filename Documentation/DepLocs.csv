@@ -1,0 +1,19 @@
+﻿Dataset Provider,Location Description,Dataset name,Latitude,Longitude,Depth (m),Exact
+Orca Sound,Orcasound Lab,podcast_round2,48.525,-123.159,8,1
+,Bush Point,podcast_round11,48.031,-122.608,12.5,1
+,Port Townsand,podcast_round12,48.135,-122.760,8,1
+ONC,Berkley Canyon,Berkley Canyon,48.426,126.174,40,1
+DFO CRP,West Vancouver Island,WVanIsl      ,49.184798,-126.582571,114,0
+,Northern Mainland British Colombia,NorthBc,51.699417,-128.959621,35,0
+DFO WDLP,Carmanah Point           ,CarmanahPt           ,48.561021,-124.798804,55,0
+,Strait of Georgia North 1,StrGeoN1,49.865,-124.871,72,0
+,Strait of Georgia South 1,StrGeoS1,49.365194,-123.889334,193,0
+,Swansen Channel,SwanChan,48.80033,-123.354307,245,0
+SIMRES,"Tekteksen (East Point), Saturna Island, BC",Tekteksen,48.780,-123.052,27,1
+SIO,Cape Elizabeth,CE_01,47.358,-124.683,100,1
+,Quinault Canyon,Cpe_Elz,47.500,-125.353,1400,1
+JASCO/VPFA,Haro Strait Northbound,HaroStraitNorth,48.51805,-123.1916667,251,1
+,Haro Strait Southbound,HaroStraitSouth,48.5167,-123.2076167,210,1
+,Boundary Pass,BoundaryPass,48.76078,-123.06794,193,1
+JASCO/VPFA/ONC,Roberts Bank/Strait of Georgia East,StraitofGeorgia,49.043,-123.317,168,1
+SMRU,Lime Kiln,LmKln,48.51,-123.15,23,1

@@ -24,7 +24,7 @@ colOut = c('Soundfile','Dep','LowFreqHz','HighFreqHz','FileEndSec', 'UTC',
 
 ClassSpeciesList = c('KW', 'HW', 'AB', 'UndBio')
 AnnotationLevelList = c('File', 'Detection', 'Call')
-EcotypeList = c('SRKW', 'BKW', 'OKW')
+EcotypeList = c('SRKW', 'BKW', 'OKW', 'NRKW')
 # For the class species, options are: KW, HW, AB, and UndBio
 # Killer whale, humpback whale, abiotic, and unknown Bio which includes 
 # Other dolphin acoustically active species ranging from fin whales, to 
@@ -201,7 +201,12 @@ ONC_anno= ONC_anno[,colOut]
 
 rm(list= c('missingData', 'badidx', 'dayFolderPath'))
 
-runTests(ONC_anno, EcotypeList)
+# Make sure all audio files are present for all annotations
+if (all(ONC_anno$FileOk)){
+  print('All data present for annotations')}else{print('Missing data')}
+
+
+runTests(ONC_anno, EcotypeList, ClassSpeciesList)
 
 ############################################################################
 # DFO Cetacean Research Program
@@ -231,13 +236,16 @@ DFO_CRP$ClassSpecies[
                               'Chain?', 'ADCP', 'Anchor Noise', 'Clang',
                               'Vessel Noise?', 'Chain','No sound data',
                               "Blast/Breach", "Fishing Gear", "Breach",
-                              'Rubbing')] = 'AB'
+                              'Rubbing',"Anthro", "Nearby Uncharted Wreck",
+                              'Water Noise', "Water Noise", "Mooring" ,
+                              "Nothing","Mooring?", "Naval Sonar",
+                              "Rocks?", "Rock?")] = 'AB'
 
 DFO_CRP$ClassSpecies[DFO_CRP$ClassSpecies %in% c("KW/PWSD?", "HW/KW?","KW?")]=
   'KW'
 
 DFO_CRP$ClassSpecies[DFO_CRP$ClassSpecies %in% c("HW/GW", "HW/PWSD","HW/PWSD?",
-                                                 "NPRW?HW?")]='HW'
+                                                 "NPRW?HW?", 'HW?', "HW/GW?")] ='HW'
 
 DFO_CRP$ClassSpecies[!DFO_CRP$ClassSpecies %in% ClassSpeciesList] = 'UndBio'
 DFO_CRP$KW = ifelse(DFO_CRP$ClassSpecies == 'KW', 1,0)
@@ -245,26 +253,21 @@ DFO_CRP$KW = ifelse(DFO_CRP$ClassSpecies == 'KW', 1,0)
 # Set up the uncertainty
 DFO_CRP$KW_certain= NA
 DFO_CRP$KW_certain[DFO_CRP$KW==1] =1
-DFO_CRP$KW_certain[intersect(which(DFO_CRP$KW==1), 
-                      which(grepl("//?", DFO_CRP$sound_id_species)))]<-0
-
-
-
-
-
-
-# Add bool for KWs
-DFO_CRP <- DFO_CRP %>%
-  mutate(KW = as.numeric(grepl("KW", sound_id_species)))
-
-
-                                                
+DFO_CRP$KW_certain[DFO_CRP$sound_id_species %in% c("KW/PWSD?","HW/KW?",
+                                                   "KW?")]=0
 
 
 # Add Ecotype- note uncertain ecotypes getting their own guess
 DFO_CRP$Ecotype = as.factor(DFO_CRP$kw_ecotype)
 levels(DFO_CRP$Ecotype)<-c(NA, 'NRKW', 'NRKW', 'OKW', 'OKW', 'SRKW', 'SRKW',
                             'BKW', 'BKW', NA)
+DFO_CRP$Ecotype[DFO_CRP$KW ==0]<-NA
+
+# If the species is unsure then the ecotype is unsure
+DFO_CRP$Ecotype[DFO_CRP$KW_certain==0]<- NA
+
+# If the species is unsure then the ecotype is unsure
+DFO_CRP$Ecotype[DFO_CRP$KW_certain==0]<- NA
 
 
 DFO_CRP$Soundfile = DFO_CRP$filename
@@ -307,8 +310,6 @@ DFO_CRP$FilePath[NBCidx] =
 
 DFO_CRP$FileOk  = file.exists(DFO_CRP$FilePath) 
 
-DFO_CRP$KW_certain[DFO_CRP$KW!= 'KW']=NA
-
 DFO_CRP$dur = DFO_CRP$FileEndSec  - DFO_CRP$FileBeginSec
 
 # # Sort and then identify overlaps
@@ -316,12 +317,15 @@ DFO_CRP$dur = DFO_CRP$FileEndSec  - DFO_CRP$FileBeginSec
 #   arrange(Dep,UTC) %>%
 #   mutate(overlap = lead(UTC) <= lag(end_time, default = first(end_time)))
 
-DFO_CRP = DFO_CRP[, c(colOut)]
-
 rm(list= c('DFO_CRP1', 'DFO_CRP2'))
 
-runTests(DFO_CRP, EcotypeList)
+# Make sure all audio files are present for all annotations
+if (all(DFO_CRP$FileOk)){
+  print('All data present for annotations')}else{print('Missing data')}
 
+runTests(DFO_CRP, EcotypeList, ClassSpeciesList)
+
+DFO_CRP = DFO_CRP[, c(colOut)]
 # 
 # # List which files are not in annotations list
 # audio.files = data.frame(
@@ -453,7 +457,7 @@ runTests(DFO_CRP, EcotypeList)
 ############################################################################
 
 # Get a list of files matching the pattern 'annot_Malahat'
-file_list <- list.files(path = 'D:\\DFO_Yurk/Annotations', 
+file_list <- list.files(path = 'D:\\DFO_WDLP/Annotations/merged_annotations/', 
                         pattern = '*csv', full.names = TRUE)
 
 
@@ -497,7 +501,7 @@ DFO_WDLP$KW_certain[DFO_WDLP$KW==1]<-1
 DFO_WDLP$Provider = 'DFO_WDA'
 
 
-DFO_WDLP$AnnotationLevel = 'Detection'
+DFO_WDLP$AnnotationLevel = 'call'
 
 
 
@@ -519,7 +523,7 @@ levels(DFO_WDLP$DepFolder)<-c('CMN_2022-03-08_20220629_ST_utc',
                               'SWAN_20211113_20220110_AMAR_utc')
 
 # Filepaths
-dayFolderPath = 'E:\\DCLDE2026\\DFO_WDLP\\Audio'
+dayFolderPath = 'D:\\DFO_WDLP\\Audio'
 DFO_WDLP$FilePath = 
   file.path(dayFolderPath, DFO_WDLP$DepFolder, 
             format(DFO_WDLP$UTC, "%Y%m%d"),
@@ -527,11 +531,12 @@ DFO_WDLP$FilePath =
 
 DFO_WDLP$FileOk  = file.exists(DFO_WDLP$FilePath) 
 
+# Make sure all audio files are present for all annotations
+if (all(DFO_WDLP$FileOk)){
+  print('All data present for annotations')}else{print('Missing data')}
 
+runTests(DFO_WDLP, EcotypeList, ClassSpeciesList)
 DFO_WDLP = DFO_WDLP[, colOut]
-
-runTests(DFO_WDLP, EcotypeList)
-
 rm(list=c('dayFolderPath','dayFolderPath_NBC','dayFolderPath_WV','NBCidx','WVIidx'))
    
 ###############################################################################
@@ -579,11 +584,17 @@ OrcaSound$AnnotationLevel = ifelse(OrcaSound$ClassSpecies == 'KW',
                                    'Detection', 'File')
 
 # Filepaths
-dayFolderPath = 'E:\\DCLDE2026\\OrcaSound\\Audio'
+dayFolderPath = 'D:\\OrcaSound\\Audio'
 OrcaSound$FilePath = 
   file.path(dayFolderPath,OrcaSound$Soundfile)
 
 OrcaSound$FileOk  = file.exists(OrcaSound$FilePath) 
+
+# Make sure all audio files are present for all annotations
+if (all(OrcaSound$FileOk)){
+  print('All data present for annotations')}else{print('Missing data')}
+
+
 
 OrcaSound[OrcaSound$AnnotationLevel=='File', 
           c('FileBeginSec', 'FileEndSec',
@@ -591,7 +602,7 @@ OrcaSound[OrcaSound$AnnotationLevel=='File',
 
 OrcaSound = OrcaSound[,c(colOut)]
 
-runTests(OrcaSound, EcotypeList)
+runTests(OrcaSound, EcotypeList, ClassSpeciesList)
 
 rm(list =c('problemData', 'problemIdx', 'dayFolderPath'))
 
@@ -620,7 +631,7 @@ SIMRES <- do.call(rbind, lapply(file_list, function(file) {
 SIMRES = SIMRES[!is.na(SIMRES$Selection),]
 
 SIMRES$ClassSpecies = as.factor(SIMRES$Sound.ID.Species)
-levels(SIMRES$ClassSpecies)<-c('AB', 'UndBio','KW',  'KW', 'KW')
+levels(SIMRES$ClassSpecies)<-c('AB', 'HW','KW',  'KW', 'KW')
 
 
 #check SIMRES files in UTC
@@ -632,17 +643,11 @@ SIMRES$UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z)_.*", "\\1",
 SIMRES$Ecotype = as.factor(SIMRES$KW.Ecotype)
 levels(SIMRES$Ecotype)<- c(NA, NA, 'SRKW', 'SRKW')
 
-SIMRES$KW =as.numeric(grepl("KW", SIMRES$Sound.ID.Species))
+SIMRES$KW =ifelse(SIMRES$ClassSpecies=='KW', 1, 0)
 
 SIMRES$KW_certain = NA
 SIMRES$KW_certain[SIMRES$KW ==1] =1
 SIMRES$KW_certain[SIMRES$Confidence %in% c('low')]=0
-
-SIMRES$KW_certain= NA
-SIMRES$KW_certain[SIMRES$KW==1] =1
-SIMRES$KW_certain[SIMRES$KW==1 & 
-                    grepl("\\?", SIMRES$Sound.ID.Species)]<-0
-
 
 
 SIMRES$Soundfile = SIMRES$Begin.File
@@ -670,10 +675,19 @@ SIMRES$FilePath <- sapply(SIMRES$Soundfile, function(filename) {
 })
 
 
-SIMRES$FileOk  = file.exists(SIMRES$FilePath) 
-SIMRES= SIMRES[, colOut]
 
-runTests(SIMRES, EcotypeList)
+SIMRES <- SIMRES %>%
+  mutate(FileOk = file.exists(FilePath))
+
+# Make sure all audio files are present for all annotations
+if (all(SIMRES$FileOk)){
+  print('All data present for annotations')}else{print('Missing data')}
+
+
+runTests(SIMRES, EcotypeList, ClassSpeciesList)
+
+
+SIMRES= SIMRES[, colOut]
 rm(list= c('file_list', 'dayFolderPath'))
 
 ############################################################################
@@ -690,10 +704,10 @@ VPFA_SoG <- VPFA_SoG %>%
   )
 
 
-
 VPFA_SoG$ClassSpecies=VPFA_SoG$sound_id_species
 VPFA_SoG$ClassSpecies[VPFA_SoG$sound_id_species == 'KW?'] ='KW'
-VPFA_SoG$ClassSpecies[VPFA_SoG$sound_id_species %in% c('KW?', "HW/KW?")]<-'KW'
+VPFA_SoG$ClassSpecies[VPFA_SoG$sound_id_species %in% c('KW?', "HW/KW?",
+                                                       'KW/PWSD?')]<-'KW'
 VPFA_SoG$ClassSpecies[VPFA_SoG$sound_id_species %in% c( "HW?")]<-'HW'
 
 VPFA_SoG$ClassSpecies[VPFA_SoG$ClassSpecies %in% 
@@ -762,13 +776,13 @@ VPFA_SoG <- VPFA_SoG %>%
 
 # Make sure all audio files are present for all annotations
 if (all(VPFA_SoG$FileOk)){
-  print('All data present for annogations')}else{print('Missing data')}
+  print('All data present for annotations')}else{print('Missing data')}
 
 
 
 VPFA_SoG =VPFA_SoG[,colOut]
 
-runTests(VPFA_SoG, EcotypeList)
+runTests(VPFA_SoG, EcotypeList, ClassSpeciesList)
 
 ############################################################################
 # VFPA - JASCO Boundary Pass
@@ -848,7 +862,7 @@ audio.files$Soundfile =basename(audio.files$filename)
 
 # Make sure all audio files are present for all annotations
 if (all(VPFA_BoundaryPass$Soundfile %in% audio.files$Soundfile)){
-  print('All data present for annogations')
+  print('All data present for annotations')
   VPFA_BoundaryPass$FileOk= TRUE
 }else{
   print('Missing data')
@@ -873,7 +887,7 @@ if (all(VPFA_BoundaryPass$FileOk)){
 
 
 VPFA_BoundaryPass = VPFA_BoundaryPass[,colOut]
-runTests(VPFA_BoundaryPass, EcotypeList)
+runTests(VPFA_BoundaryPass, EcotypeList, ClassSpeciesList)
 
 ############################################################################
 # VFPA - JASCO Haro Strait North
@@ -952,7 +966,7 @@ audio.files$Soundfile =basename(audio.files$filename)
 
 # Make sure all audio files are present for all annotations
 if (all(VPFA_HaroNB$Soundfile %in% audio.files$Soundfile)){
-  print('All data present for annogations')
+  print('All data present for annotations')
   VPFA_HaroNB$FileOk=TRUE
 }else{
   print('Missing data')
@@ -975,7 +989,7 @@ if (all(VPFA_HaroNB$FileOk)){
   print('All data present for annotations')}else{print('Missing data')}
 
 VPFA_HaroNB= VPFA_HaroNB[,colOut]
-runTests(VPFA_HaroNB, EcotypeList)
+runTests(VPFA_HaroNB, EcotypeList, ClassSpeciesList)
 
 ############################################################################
 # VFPA - JASCO Haro Strait South
@@ -1049,7 +1063,7 @@ audio.files$Soundfile =basename(audio.files$filename)
 
 # Make sure all audio files are present for all annotations
 if (all(VPFA_HaroSB$Soundfile %in% audio.files$Soundfile)){
-  print('All data present for annogations')
+  print('All data present for annotations')
   VPFA_HaroSB$FileOk = TRUE
 }else{
   print('Missing data')
@@ -1070,7 +1084,7 @@ if (all(VPFA_HaroSB$FileOk)){
   print('All data present for annotations')}else{print('Missing data')}
 
 VPFA_HaroSB= VPFA_HaroSB[, colOut]
-runTests(VPFA_HaroNB, EcotypeList)
+runTests(VPFA_HaroSB, EcotypeList, ClassSpeciesList)
 ###########################################################################
 # SCRIPPS
 ############################################################################
@@ -1128,10 +1142,112 @@ scripps$FileOk=TRUE
 
 
 scripps = scripps[, colOut]
-runTests(scripps, EcotypeList)
+runTests(scripps, EcotypeList, ClassSpeciesList)
 
 #############################################################################
+# SMRU Consulting
+#############################################################################
 
+# Strait fo Georgia
+SMRU_SRKW<- read.csv('D:\\SMRU/annotations/annot_LimeKiln-Encounters_man_det.csv')
+SMRU_HW<- read.csv('D:\\SMRU/annotations/annot_LimeKiln-Humpback_man_det.csv')
+
+SMRU <- rbind(SMRU_HW, SMRU_SRKW)
+
+SMRU <- SMRU %>%
+  mutate(
+    UTC = as.POSIXct(sub(".*_(\\d{8}_\\d{6}_\\d{3})\\..*", "\\1", filename), 
+               format = "%Y%m%d_%H%M%S_%OS", tz = "UTC")
+  )
+
+# Some annotations witout sound species ID, remove
+SMRU = SMRU[SMRU$sound_id_species != "",]
+
+SMRU$ClassSpecies=SMRU$sound_id_species
+SMRU$ClassSpecies[SMRU$sound_id_species %in% 
+                    c('KW?', "KW", "HW/KW?", "KW/PWSD","KW/PWSD?",
+                      "PWSD/KW?")]<-'KW'
+
+SMRU$ClassSpecies[SMRU$sound_id_species %in% c( "HW?", "HW", "HB", "HB?")]<-'HW'
+
+SMRU$ClassSpecies[SMRU$ClassSpecies %in% 
+                        c("Vessel Noise", "Vessel Noise?",  "Noise", 
+                          "Sonar","UN", "Unknown", "Mooring", "surface noise",
+                          "Vessel noise", "Unknown?", "Mooring noise", 
+                          "Wave noise", "Vessel  Noise", "Surf noise",
+                          "Waves", "Mooring ", "Mooring?")]= 'AB'
+
+SMRU$ClassSpecies[SMRU$ClassSpecies %in% 
+                        c("PWSD","FS", "Seal?", "Fish", "Fish?", "FISH",
+                          "Snapping shrimp/urchin", 
+                          "Snapping shrimp or urchin" )]= 'UndBio'
+
+
+# Set the KW class and certainty
+SMRU$KW = ifelse(SMRU$ClassSpecies == 'KW',1,0)
+SMRU$KW_certain= NA
+SMRU$KW_certain[SMRU$KW==1] =1
+SMRU$KW_certain[SMRU$KW==1 & 
+                      grepl("\\?", SMRU$sound_id_species)]<-0
+
+
+SMRU$UTC = SMRU$UTC+ seconds(as.numeric(SMRU$start))
+
+# Add Ecotype 
+SMRU$Ecotype = NA
+SMRU$Ecotype[SMRU$kw_ecotype == 'SRKW'] ='SRKW'
+SMRU$Ecotype[SMRU$kw_ecotype == 'SRKW?'] ='SRKW'
+SMRU$Ecotype[SMRU$kw_ecotype == 'KWT?'] ='BKW'
+SMRU$Ecotype[SMRU$kw_ecotype == 'TKW?'] ='BKW'
+
+
+colnames(SMRU)[c(5,6,3,4,1)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
+                                    'FileEndSec', 'Soundfile')
+
+
+SMRU$AnnotationLevel = 'Call'
+
+SMRU$dur = SMRU$FileEndSec-SMRU$FileBeginSec
+SMRU$end_time = SMRU$UTC+ seconds(SMRU$dur)
+
+SMRU$Dep='LimeKiln'
+SMRU$Provider = 'SMRUConsulting'
+
+# Sort and then identify overlaps
+SMRU <- SMRU %>%
+  arrange(Dep,UTC) %>%
+  mutate(overlap = lead(UTC) <= lag(end_time, default = first(end_time)))
+
+
+# List which files are not in annotations list
+audio.files = data.frame(
+  filename = list.files('D:\\SMRU/Audio/Lime Kiln/',
+                        pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
+audio.files$Soundfile =basename(audio.files$filename)
+
+
+
+# Day folder
+dayFolderPath = 'D:\\SMRU/Audio/Lime Kiln/'
+SMRU$FilePath = file.path(dayFolderPath,
+                          SMRU$path)
+
+SMRU <- SMRU %>%
+  mutate(FileOk = file.exists(FilePath))
+
+# Make sure all audio files are present for all annotations
+if (all(SMRU$FileOk)){
+  print('All data present for annotations')}else{print('Missing data')}
+
+
+
+SMRU =SMRU[,colOut]
+
+runTests(SMRU, EcotypeList, ClassSpeciesList)
+
+
+
+###########################################################################
 allAnno = rbind(DFO_CRP, DFO_WDLP, OrcaSound, ONC_anno, scripps, SIMRES,
                 VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG)
 
@@ -1158,24 +1274,108 @@ table(KW_data$Ecotype)
 
 
 ############################################################################
+# Plot
+############################################################################
+
+library(ggOceanMaps)
+library(mapdata)
+library(sf)
+library(tidyr)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(ggspatial)
+
+# Deployment Locations
+depLocs = read.csv('C:/Users/kaity/Documents/GitHub/DCLDE2026/Documentation/DepLocs.csv',
+                   header = TRUE)
+colnames(depLocs)[c(4,5)]<- c('lat', 'lon')
+
+# plotting will crash otherwise
+sf_use_s2(FALSE) 
+
+p<-basemap(limits= c(-130, -122.5, 47, 52.2), bathymetry = TRUE,
+        bathy.style = "rcb", rotate = TRUE)+
+  ggspatial::annotation_north_arrow(location = "tr", which_north = "true") +
+  guides(fill="none")
+  
+p= p+ ggspatial::geom_spatial_point(data = depLocs[depLocs$Exact==0,], 
+                                aes(x = lon, y = lat), fill = "red",
+                                size =50, alpha= 0.25, pch=21)+
+    ggspatial::geom_spatial_point(data = depLocs[depLocs$Exact==1,], 
+                                  aes(x = lon, y = lat), pch=21, fill = "red",
+                                  size =5, alpha= 1)+
+    xlab('Longitude')+ylab('Latitude')+
+    #theme(plot.margin = unit(c(0.3,0.2,0,2), 'lines'))+
+    theme(axis.text=element_text(size=20),
+          axis.title=element_text(size=24,face="bold"))
+
+    
+
+
+
+ragg::agg_png("DataMap.png", 
+               width = 40, 
+               height = 30, 
+               units = "cm", res = 250)
+print(p)
+dev.off()
+
+
+
+
+
+############################################################################
 # Histogram of months
 library(ggplot2)
 
 ggplot(data = allAnno[!is.na(allAnno$ClassSpecies),], 
        aes(x= month(UTC)))+
   geom_histogram(aes(fill  = as.factor(ClassSpecies)), bins = 12)+
-  facet_wrap(~Provider)+
+  facet_wrap(~Provider, scales = 'free_y')+
+  scale_fill_discrete(name = "KW Annotations")+
+  theme_bw()+
+  xlab('Month')+
+  ylab('Annotations')
+
+
+# Convert month numbers to month names
+KW_data$Month = month(KW_data$UTC)
+KW_data$Month <- month.name[KW_data$Month]
+
+ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'BKW'))
+                       , aes(x= month(UTC)))+
+  geom_histogram(aes(fill  = as.factor(Ecotype)))+
+  facet_wrap(~Provider, scales = 'free_y')+
   scale_fill_discrete(name = "KW Annotations")+
   theme_bw()+
   xlab('Month')
 
-ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'BKW'))
-                       , aes(x= month(UTC)))+
-  geom_histogram(aes(fill  = as.factor(Ecotype)), bins = 12)+
-  facet_wrap(~Provider)+
-  scale_fill_discrete(name = "KW Annotations")+
-  theme_bw()+
+KW_data$Month <- month(ymd(KW_data$UTC))  # Extract month number from the UTC date
+
+
+
+
+ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'BKW')),
+       aes(x = Month)) +  # Use Month instead of month(UTC)
+  geom_histogram(aes(fill = Ecotype)) +
+  facet_wrap(~Provider, scales = 'free_y') +
+  scale_fill_discrete(name = "KW Annotations") +
+  theme_bw() +
   xlab('Month')
+
+
+
+library(zoo)
+
+KW_data <- KW_data %>%
+  mutate(month = month(UTC))
+
+ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'BKW')),
+       aes(as.yearmon(UTC), fill=Ecotype)) + 
+  geom_bar(position = position_dodge(width  = 1/12),
+           fill= as.factor(Ecotype), 
+           binwidth=1/12, colour='black') + 
+  scale_x_yearmon()
 
 ###########################################################################
 # Check each dataset to see which audio files have kw calls
