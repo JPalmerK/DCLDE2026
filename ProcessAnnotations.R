@@ -1272,9 +1272,42 @@ KW_data = subset(allAnno, KW ==1)
 
 table(KW_data$Ecotype)
 
+#############################################################################
+#  Train test set
+#############################################################################
+
+# Ecotype classifier labels
+# Dataset should include all annotations with an ecotype and/or that are
+# abiotic/biotic/or humpback
+
+allAnnoEcotype = subset(allAnno, Ecotype %in% EcotypeList |
+                       ClassSpecies %in% ClassSpeciesList[c(2:4)])
+
+allAnnoEcotype$Labels = as.character(allAnnoEcotype$Ecotype)
+allAnnoEcotype$Labels[is.na(allAnnoEcotype$Ecotype)] =
+  allAnnoEcotype$ClassSpecies[is.na(allAnnoEcotype$Ecotype)] 
+
+allAnnoEcotype$label = as.numeric(as.factor(allAnnoEcotype$Labels))-1
+
+
+
+
+# Not even going to try to build a balanced dataset
+allAnnoEcotype$traintest =  'Train'
+allAnnoEcotype$traintest[sample(1:nrow(allAnnoEcotype),
+                         floor(nrow(allAnnoEcotype)*0.2), replace = FALSE)]= 'Test'
+
+write.csv(subset(allAnnoEcotype, traintest=='Train'), row.names = FALSE,
+          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTrain.csv')
+
+write.csv(subset(allAnnoEcotype, traintest=='Test'),  row.names = FALSE,
+          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTest.csv')
+
+
+
 
 ############################################################################
-# Plot
+# Plot Figure
 ############################################################################
 
 library(ggOceanMaps)
