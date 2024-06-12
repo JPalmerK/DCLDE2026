@@ -345,112 +345,6 @@ DFO_CRP = DFO_CRP[, c(colOut)]
 # # Remove files without annotations
 # filesRm = DFO_CRP[DFO_CRP$keep == FALSE,]
 # file.remove(filesRm$fullfile)
-##############################################################################
-# JASCO- Malahat
-# 
-# # Get a list of files matching the pattern 'annot_Malahat'
-# file_list <- list.files(path = 'D:/JASCO/annotations/', 
-#                         pattern = 'annot_Malahat', full.names = TRUE)
-# 
-# 
-# # Read and concatenate the CSV files with filename as a separate column (if non-empty)
-# JASCO_malahat <- do.call(rbind, lapply(file_list, function(file) {
-#   data <- read.csv(file)
-#   if (nrow(data) > 0) {
-#     data$Dep <- as.factor(basename(file))  # Add filename as a new column
-#     return(data)
-#   } else {
-#     return(NULL)  # Return NULL for empty data frames
-#   }
-# }))
-# 
-# JASCO_malahat <- JASCO_malahat %>%
-#   mutate(
-#     KW = as.numeric(grepl("KW", sound_id_species)),
-#     UTC = as.POSIXct(sub(".*(\\d{8}T\\d{6}Z).*", "\\1", filename), 
-#                      format = "%Y%m%dT%H%M%S", tz= 'UTC')
-#   )
-# 
-# JASCO_malahat$KW_certain= NA
-# JASCO_malahat$KW_certain[JASCO_malahat$KW==1] =1
-# JASCO_malahat$KW_certain[JASCO_malahat$KW==1 & 
-#                       grepl("//?", JASCO_malahat$sound_id_species)]<-0
-# 
-# JASCO_malahat$UTC = JASCO_malahat$UTC+ 
-#   seconds(as.numeric(JASCO_malahat$start))
-# 
-# 
-# # Add Ecotype 
-# JASCO_malahat$Ecotype = NA
-# JASCO_malahat$Ecotype[JASCO_malahat$kw_ecotype == 'SRKW'] ='SRKW'
-# JASCO_malahat$Ecotype[JASCO_malahat$kw_ecotype == 'SRKW?'] ='BKW'
-# JASCO_malahat$Ecotype[JASCO_malahat$kw_ecotype == 'KWT?'] ='BKW'
-# JASCO_malahat$Ecotype[JASCO_malahat$kw_ecotype == 'TKW?'] ='BKW'
-# 
-# JASCO_malahat$KW_certain[JASCO_malahat$ClassSpecies!= 'KW']=0
-# 
-# 
-# 
-# colnames(JASCO_malahat)[c(5,6,3,4,1,8)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
-#                                            'FileEndSec', 'Soundfile','ClassSpecies')
-# 
-# JASCO_malahat$ClassSpecies[JASCO_malahat$ClassSpecies == 'KW?'] ='KW'
-# JASCO_malahat$ClassSpecies[JASCO_malahat$ClassSpecies %in% 
-#                              c("HW/KW?", "HW?")]= 'HW'
-# 
-# JASCO_malahat$ClassSpecies[JASCO_malahat$ClassSpecies %in% 
-#                              c("VESSEL", "VESSEL/HW?",  "VESSEL CHAIN", 
-#                                "CHAIN","UNK")]= 'AB'
-# 
-# JASCO_malahat$ClassSpecies[JASCO_malahat$ClassSpecies %in% 
-#                              c("HW/KW", "SEAGULL?")]= 'UndBio'
-# 
-# 
-# JASCO_malahat$AnnotationLevel = 'Call'
-# 
-# JASCO_malahat$dur = JASCO_malahat$FileEndSec-JASCO_malahat$FileBeginSec
-# 
-# JASCO_malahat$end_time = JASCO_malahat$UTC+ seconds(JASCO_malahat$dur)
-# 
-# # Sort and then identify overlaps
-# JASCO_malahat <- JASCO_malahat %>%
-#   arrange(Dep,UTC) %>%
-#   mutate(overlap = lead(UTC) <= lag(end_time, default = first(end_time)))
-# 
-# 
-# 
-# JASCO_malahat$Provider = 'JASCO_Malahat'
-# levels(JASCO_malahat$Dep)<-c('STN3', 'STN4', 'STN5', 'STN6')
-# 
-# # Filepaths
-# dayFolderPath = 'E:\\DCLDE2026\\JASCO\\Audio'
-# JASCO_malahat$FilePath = 
-#   file.path(dayFolderPath, JASCO_malahat$Dep,JASCO_malahat$path)
-# 
-# JASCO_malahat$FileOk  = file.exists(JASCO_malahat$FilePath) 
-# 
-# 
-# JASCO_malahat = JASCO_malahat[,c(colOut)]
-# 
-# 
-# # List which files are not in annotations list
-# audio.files = data.frame(
-#   filename = list.files('E:\\DCLDE2026\\JASCO/Audio/',
-#            pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
-# audio.files$Soundfile =basename(audio.files$filename)
-# 
-# JASCO = merge(audio.files, JASCO_malahat, by ='Soundfile', all.x = TRUE)
-# 
-# JASCO$keep = JASCO$Soundfile %in% JASCO_malahat$Soundfile
-# 
-# # keep the file after all the start files, just incase
-# idxExtraKeep = which(JASCO$keep ==TRUE)
-# 
-# JASCO$keep[idxExtraKeep+1] = TRUE
-# 
-# # Remove files without annotations
-# filesRm = DFO_CRP[DFO_CRP$keep == FALSE,]
-# file.remove(filesRm$filename)
 
 ############################################################################
 # DFO Yurk
@@ -1246,6 +1140,108 @@ SMRU =SMRU[,colOut]
 runTests(SMRU, EcotypeList, ClassSpeciesList)
 
 
+##############################################################################
+#JASCO- Malahat
+###############################################################################
+
+# Get a list of files matching the pattern 'annot_Malahat'
+file_list <- list.files(path = 'D:/Malahat_JASCO/Annotations/',
+                        pattern = 'annot_Malahat', full.names = TRUE)
+
+
+# Read and concatenate the CSV files with filename as a separate column (if non-empty)
+JASCO_malahat <- do.call(rbind, lapply(file_list, function(file) {
+  data <- read.csv(file)
+  if (nrow(data) > 0) {
+    data$Dep <- as.factor(basename(file))  # Add filename as a new column
+    return(data)
+  } else {
+    return(NULL)  # Return NULL for empty data frames
+  }
+}))
+
+
+JASCO_malahat <- JASCO_malahat %>%
+  mutate(
+    UTC = as.POSIXct(sub(".*(\\d{8}T\\d{6}Z).*", "\\1", filename),
+                     format = "%Y%m%dT%H%M%S", tz= 'UTC'))
+JASCO_malahat$UTC = JASCO_malahat$UTC+
+  seconds(as.numeric(JASCO_malahat$start))
+
+JASCO_malahat$ClassSpecies = as.factor(JASCO_malahat$sound_id_species)
+levels(JASCO_malahat$ClassSpecies)<-c('AB', 'HW','KW','HW',  'KW', 'KW', 
+                                      'UndBio', 'UndBio','AB', 'AB', 'AB')
+
+JASCO_malahat$Ecotype = as.factor(JASCO_malahat$kw_ecotype)
+levels(JASCO_malahat$Ecotype)<- c(NA,'SRKW', NA, 'BKW', NA)
+
+JASCO_malahat$KW =ifelse(JASCO_malahat$ClassSpecies %in% c('KW', 'KW?'), 1, 0)
+
+JASCO_malahat$KW_certain = NA
+JASCO_malahat$KW_certain[JASCO_malahat$KW ==1] =1
+JASCO_malahat$KW_certain[JASCO_malahat$sound_id_species %in% c("HW/KW?",
+                                                               "KW?")]=0
+
+colnames(JASCO_malahat)[c(5,6,3,4,1)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
+                                         'FileEndSec', 'Soundfile')
+
+
+
+
+JASCO_malahat$AnnotationLevel = 'Call'
+
+JASCO_malahat$dur = JASCO_malahat$FileEndSec-JASCO_malahat$FileBeginSec
+
+JASCO_malahat$end_time = JASCO_malahat$UTC+ seconds(JASCO_malahat$dur)
+
+
+
+
+JASCO_malahat$Provider = 'JASCO_Malahat'
+levels(JASCO_malahat$Dep)<-c('STN3', 'STN4', 'STN5', 'STN6')
+
+# Filepaths
+dayFolderPath = 'C:\\TempData\\Malahat'
+JASCO_malahat$FilePath =
+  file.path(dayFolderPath, JASCO_malahat$Dep,JASCO_malahat$path)
+
+JASCO_malahat$FileOk  = file.exists(JASCO_malahat$FilePath)
+
+
+# Make sure all audio files are present for all annotations
+if (all(JASCO_malahat$FileOk)){
+  print('All data present for annotations')}else{print('Missing data')}
+
+runTests(JASCO_malahat, EcotypeList, ClassSpeciesList)
+
+JASCO_malahat = JASCO_malahat[,c(colOut)]
+
+
+# Nix annotations without audio files
+
+JASCO_malahat= JASCO_malahat[JASCO_malahat$FileOk==TRUE,]
+
+
+
+
+# # List which files are not in annotations list
+#  audio.files = data.frame(
+#    filename = list.files('E:\\DCLDE2026\\JASCO/Audio/',
+#             pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
+#  audio.files$Soundfile =basename(audio.files$filename)
+# # 
+#  JASCO = merge(audio.files, JASCO_malahat, by ='Soundfile', all.x = TRUE)
+# # 
+#  JASCO$keep = JASCO$Soundfile %in% JASCO_malahat$Soundfile
+# 
+# # keep the file after all the start files, just incase
+# idxExtraKeep = which(JASCO$keep ==TRUE)
+# 
+# JASCO$keep[idxExtraKeep+1] = TRUE
+# 
+# # Remove files without annotations
+# filesRm = DFO_CRP[DFO_CRP$keep == FALSE,]
+# file.remove(filesRm$filename)
 
 ###########################################################################
 allAnno = rbind(DFO_CRP, DFO_WDLP, OrcaSound, ONC_anno, scripps, SIMRES,
@@ -1279,6 +1275,8 @@ table(KW_data$Ecotype)
 # Ecotype classifier labels
 # Dataset should include all annotations with an ecotype and/or that are
 # abiotic/biotic/or humpback
+allAnno
+
 
 allAnnoEcotype = subset(allAnno, Ecotype %in% EcotypeList |
                        ClassSpecies %in% ClassSpeciesList[c(2:4)])
@@ -1287,9 +1285,20 @@ allAnnoEcotype$Labels = as.character(allAnnoEcotype$Ecotype)
 allAnnoEcotype$Labels[is.na(allAnnoEcotype$Ecotype)] =
   allAnnoEcotype$ClassSpecies[is.na(allAnnoEcotype$Ecotype)] 
 
+allAnnoEcotype$Labels = as.factor(allAnnoEcotype$Labels)
+
 allAnnoEcotype$label = as.numeric(as.factor(allAnnoEcotype$Labels))-1
 
+label_mapping_traintest <- unique(allAnnoEcotype[c("label", "Labels")])
 
+
+# Malahat validation
+JASCO_malahatSub = subset(allAnnoEcotype, Provider== 'JASCO_Malahat')
+JASCO_malahatSub$traintest = 'Train'
+
+
+label_mapping_Validation <- unique(JASCO_malahatSub[c("label", "Labels")])
+write.csv(JASCO_malahatSub, 'C:/Users/kaity/Documents/GitHub/Ecotype/Malahat.csv')
 
 
 # Not even going to try to build a balanced dataset
