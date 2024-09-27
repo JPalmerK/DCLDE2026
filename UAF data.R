@@ -6,13 +6,28 @@
 #############################################################################
 library(dplyr)
 library(lubridate)
-# Get a list of files matching the pattern 'annot_Malahat'
-file_list <- list.files(path = 'E:/DCLDE/UAF/Annotations/',
+
+source('C:/Users/kaity/Documents/GitHub/DCLDE2026/TestFx.R')
+
+# Downloaded Audio locationf
+root_dir ='E:\\DCLDE\\UAF\\Myers_DCLDE_2026_killer_whale_data\\Myers_DCLDE_2026_killer_whale_data'
+
+# New Audio Location (where to move the organized files too)
+new_root ='E:\\DCLDE\\UAF\\Audio'
+
+# Annotations location (already moved all the annotations here)
+annot_root =  'E:\\DCLDE\\UAF\\Annotations\\'
+
+
+# Downloaded Annotations (already organized)
+file_list <- list.files(path = annot_root,
                         pattern = '.txt', full.names = TRUE,
                         recursive = TRUE)
 
 
-# Read and concatenate the CSV files with filename as a separate column (if non-empty)
+
+# Read and concatenate the selection tables files with filename as a 
+# separate column (if non-empty)
 UAF <- do.call(rbind, lapply(file_list, function(file) {
   data <- read.table(file, header = TRUE, sep = '\t')
   audioFile<- basename(file)
@@ -33,8 +48,6 @@ UAF <- do.call(rbind, lapply(file_list, function(file) {
   }
 }))
 
-root_dir ='E:\\UAF\\Myers_DCLDE_2026_killer_whale_data'
-
 
 # Function to find full path for a single filename
 find_file_path <- function(filename, root_dir) {
@@ -52,17 +65,21 @@ find_file_path <- function(filename, root_dir) {
 UAF$audio_path <- sapply(UAF$AudioFile, find_file_path, root_dir = root_dir)
 
 # Ok now create a new path based on the hydrophone location
-UAF$NewLoc = file.path(root_dir, UAF$Hyd)
+newRoot = 'E:\\DCLDE\\UAF\\Audio'
+UAF$NewLoc = file.path(newRoot, UAF$Hyd)
 
-# copy the files
+# copy the files into deployments based on hydrophones
 for(ii in 1:nrow(UAF)){
   new_location = UAF$NewLoc[ii]
-  # check that it needs to be moed
+  
+  # check that it needs to be moved
   if(!is.na(UAF$audio_path[ii])){
     if (!file.exists(new_location)) {
-      dir.create(new_location, recursive = TRUE)  # Create the directory if it doesn't exist
+      # Create the directory if it doesn't exist
+      dir.create(new_location, recursive = TRUE)  
     }
-    file.copy(UAF$audio_path[ii], new_location, overwrite = TRUE)  # Copy the file to the new location
+     # Copy the file to the new location
+    file.copy(UAF$audio_path[ii], new_location, overwrite = TRUE) 
   }
 }
 
@@ -73,7 +90,7 @@ for(ii in 1:nrow(UAF)){
 
 
 # Get a list of annotation files
-file_list <- list.files(path = 'E:/DCLDE/UAF/Annotations/',
+file_list <- list.files(path = annot_root,
                         pattern = '.txt', full.names = TRUE,
                         recursive = TRUE)
 
@@ -81,18 +98,29 @@ file_list <- list.files(path = 'E:/DCLDE/UAF/Annotations/',
 
 # Read and concatenate the selection tables  with filename as a separate column (if non-empty)
 UAF <- do.call(rbind, lapply(file_list, function(file) {
+  
+  # read the selection table
   data <- read.table(file, header = TRUE, sep = '\t')
+  
+  # get the audio file name
   audioFile<- basename(file)
+  
+  # Hydrophone id
   Hyd <- strsplit(audioFile, "\\.")[[1]][[1]]
   
   if (nrow(data) > 0) {
-    data$Dep <- as.factor(strsplit(dirname(file),'/')[[1]][4])  # Add filename as a new column
+    
+    # Add filename as a new column and get deployment from the filename
+    data$Dep <- as.factor(strsplit(dirname(file),'/')[[1]][4])  
     data$Hyd <- as.factor(Hyd)
     parts <- strsplit(audioFile, "\\.")[[1]][1:2]
     filename <- paste(parts[1], parts[2], sep = ".")
     filename <- paste0(filename, ".wav")
     
+    #AudioFile is one of the required column headings
     data$AudioFile =filename
+    
+    # For ecotype later on
     data$FolderName = dirname(file)
     return(data)
   } else {
@@ -104,18 +132,12 @@ UAF <- do.call(rbind, lapply(file_list, function(file) {
 UAF$AudioFile <- gsub("\\.Table", "", UAF$AudioFile)
 
 
-#Correct the deployment
-UAF$Dep<-UAF$Hyd
-levels(UAF$Dep)[9:59]<-'Field' # do this first otherwise it changes the length
-levels(UAF$Dep)[1:8]<-c('RB','MS', 'KB', 'KB', 'MS', 'HE','KB', 'MS')
 
-
-root_dir ='E:\\DCLDE\\UAF\\Audio'
 
 # Function to find full path for a single filename
-find_file_path <- function(filename, root_dir) {
+find_file_path <- function(filename, new_root) {
   pattern <- filename
-  file_path <- list.files(path = root_dir, pattern = pattern, 
+  file_path <- list.files(path = new_root, pattern = pattern, 
                           recursive = TRUE, full.names = TRUE)
   if (length(file_path) > 0) {
     return(file_path)
@@ -126,152 +148,94 @@ find_file_path <- function(filename, root_dir) {
 
 
 # Apply the function to each filename in data$filename
-UAF$audio_path <- sapply(UAF$AudioFile, find_file_path, root_dir = root_dir)
+UAF$audio_path <- sapply(UAF$AudioFile, find_file_path, new_root = new_root)
 
 
-###########################################################################
-# QA QC#
-###########################################################################
-# Check that regions aren't duplicated within a hydrophone
-hydList = unique(UAF$Hyd)[1:8]
-regList = unique(UAF$Dep)
-for(ii in 1:length(hydList)){
-  regions = unique(UAF$Dep[UAF$Hyd== hydList[ii]])
-  print(regions)
-}
+# Check that all files are found
+UAF$FileOk  = file.exists(UAF$audio_path) 
 
-for(ii in 1:length(regList)){
-  hyds = unique(UAF$Hyd[UAF$Dep== regList[ii]])
-  print(paste(regList[ii],hyds))
-}
+
+# Make sure all audio files are present for all annotations
+if (all(UAF$FileOk)){
+  print('All data present for annotations')}else{print('Missing data')}
+
+
+# Missing data, not on the google drive so remove
+UAF = subset(UAF, AudioFile != '20200627_03871.wav')
+
+# Now we have the actual filename and path as well as the deployment and 
+# setup for the ecotype data
+
+
+
 ##########################################################################
+# Create the required headings
 
-# Ecotype was based off filename
-UAF$EcotypeOrig = as.factor(UAF$FolderName)
-
-levels(UAF$EcotypeOrig)<-c('AT1', 'GAT', 'SAR', 'Offshore')
-UAF$Ecotype<-UAF$EcotypeOrig
-UAF$KW = 1
-UAF$ClassSpecies= 'KW'
-UAF$KW_certain = 1
+# Origional Ecotype was not provided and instead based off filename. 
+# KW and KW_certain are easy
 
 
-# Make consistant with the rest of the labels- add SAR to manuscript levels
-levels(UAF$Ecotype)<-c('AT1','GAT','SAR', 'OKW')
+# This is the actual filename, we had to faff around a bit to get it here
 UAF$filename<-UAF$AudioFile
 
-# Merge the files
-UAF = merge(UAF, fileList[, c('FileName', 'UTC')], by.x = 'AudioFile',
+# To get the timestamps we need to merge the annotations with a separate file
+# list that has the times
+fileTimestamps = read.csv('E:\\DCLDE\\UAF\\Meta\\Myers_DCLDE_2026_files.csv')
+
+
+UAF = merge(UAF, fileTimestamps, by.x = 'AudioFile',
             by.y='FileName', all.x=TRUE)
 
 
 
-#Timestampes are different between field and soundtraps
-UAF_ST = subset(UAF, Dep!='Field')
-UAF_field = subset(UAF, Dep =='Field')
+# UTC is the UTC plus the file offset
+UAF$UTC<- as.POSIXct(UAF$UTC)+seconds(UAF$Begin.Time..s.)
+
+UAF$Soundfile<- UAF$AudioFile
+UAF$AnnotationLevel<-'Call'
 
 
-# Link the file with the list of files for proper UTC calculations
-fileList = read.csv('E:\\DCLDE\\UAF\\Myers_DCLDE_2026_killer_whale_data/Myers_DCLDE_2026_files.csv')
-fileList$UTC = as.POSIXct(fileList$UTC)
+ClassSpeciesList = c('KW', 'HW', 'AB', 'UndBio')
+AnnotationLevelList = c('File', 'Detection', 'Call')
+EcotypeList = c('SRKW', 'BKW', 'OKW', 'NRKW')
+
+# Ok Field recordings don't have an ecotype or population with them...Based
+# on the filename Resident and Southern Alaska resident
+UAF$Ecotype[is.na(UAF$Ecotype)]<- 'Resident'
+UAF$finalizedEcotype =as.factor(UAF$Population)
+
+levels(UAF$finalizedEcotype)<-c('BKW', 'BKW', 'OKW', 'SAR')
+UAF$Ecotype = UAF$finalizedEcotype
 
 
-
-
-UAF_ST <- UAF_ST %>%
-  mutate(
-    # Extracting date from filename
-    date_str = sub(".*\\.(\\d{12})\\.wav", "\\1", filename),
-    
-    # Convert extracted date string to POSIXct format
-    UTC = as.POSIXct(date_str, format = "%y%m%d%H%M%S", tz = "UTC")+seconds(UAF_ST$Begin.Time..s.)
-  )
-
-# Field recordings are different
-
-UAF_ST <- UAF_ST %>%
-  mutate(
-    # Extracting date from filename
-    
-    # Convert extracted date string to POSIXct format
-    UTC = as.POSIXct(date_str, format = "%y%m%d%H%M%S", tz = "UTC")+seconds(UAF_ST$Begin.Time..s.)
-  )
+############################################################################
+# Finish up required headings
+###########################################################################
+colOut = c('Soundfile','Dep','LowFreqHz','HighFreqHz','FileEndSec', 'UTC',
+           'FileBeginSec','ClassSpecies','KW','KW_certain','Ecotype', 'Provider',
+           'AnnotationLevel', 'FilePath', 'FileOk')
 
 
 
-# Ok now get the file locations
+UAF$Hyd<- UAF$Location
+UAF$KW = 1 # only KW annotated
+UAF$ClassSpecies= 'KW' 
+UAF$KW_certain = 1 # Only annotated calls that were certainly KW
 
-root_dir ='E:\\UAF\\Myers_DCLDE_2026_killer_whale_data/Audio/'
-
-
-
-# Function to find full path for a single filename
-find_file_path <- function(filename, root_dir) {
-  pattern <- filename
-  file_path <- list.files(path = root_dir, pattern = pattern, 
-                          recursive = TRUE, full.names = TRUE)
-  if (length(file_path) > 0) {
-    return(file_path)
-  } else {
-    return(NA)  # Return NA if file not found
-  }
-}
-
-# Apply the function to each filename in data$filename
-UAF$audio_path <- sapply(UAF$AudioFile, find_file_path, root_dir = root_dir)
-
-# Report ecotype
-UAF$Ecotype = as.factor(UAF$kw_ecotype)
+UAF$Soundfile<- UAF$AudioFile
+UAF$FileEndSec = UAF$Begin.Time..s.
+UAF$FileEndSec = UAF$End.Time..s.
+UAF$Provider <- 'UAF'
+UAF$AnnotationLevel<- 'Call'
+UAF$FilePath = UAF$audio_path
+UAF$LowFreqHz = UAF$Low.Freq..Hz.
+UAF$HighFreqHz = UAF$High.Freq..Hz.
+UAF$FileBeginSec = UAF$Begin.Time..s.
 
 
 
+runTests(UAF, EcotypeList, ClassSpeciesList)
 
 
+UAF_anno= UAF[,colOut]
 
-# Cape Elizabeth and Quinault Canyon
-levels(UAF$Dep)<-c("AT1", "GAT", 'Offshore', 'SAR')
-
-#Create the orgional ecotypes
-UAF$OrigEcotype<-UAF$Dep
-
-
-
-
-
-# Cape Elizabeth and Quinault Canyon
-levels(UAF$Dep)<-c("AT1", "GAT", 'Offshore', 'SAR')
-
-# Set the initial ecotypes then match the format
-levels()
-
-scripps$Ecotype <- as.factor(gsub(".*_(.*)\\.wav", "\\1", scripps$Begin.File))
-levels(scripps$Ecotype)<-c('BKW', 'BKW', 'BKW', 'BKW', 'OKW', 'SRKW',
-                           'SRKW','BKW', 'BKW')
-scripps$Ecotype[scripps$ClassSpecies != ""]<- NaN
-
-scripps$ClassSpecies= as.factor(scripps$ClassSpecies)
-levels(scripps$ClassSpecies)<-c('KW', 'AB', 'AB', 'HW', 'KW')
-
-scripps$KW = ifelse(scripps$ClassSpecies=='KW',1,0)
-scripps$KW_certain = ifelse(scripps$ClassSpecies=='KW',1,NA)
-
-scripps$Soundfile = scripps$Begin.File
-scripps$LowFreqHz = scripps$Low.Freq..Hz.
-scripps$HighFreqHz = scripps$Low.Freq..Hz.
-scripps$FileBeginSec = scripps$Beg.File.Samp..samples./200000
-scripps$FileEndSec = scripps$FileBeginSec+(scripps$End.Time..s.- scripps$Begin.Time..s)
-scripps$Provider = 'SIO'
-scripps$AnnotationLevel = 'Call'
-scripps$FilePath = scripps$Begin.Path
-
-
-#check SIMRES files in UTC
-scripps$UTC = as.POSIXct(sub(".*_(\\d{6}_\\d{6})_.*", "\\1",
-                             scripps$Begin.File),  
-                         format = "%y%m%d_%H%M%S",
-                         tz = 'UTC')
-scripps$FileOk=TRUE
-
-
-scripps = scripps[, colOut]
-runTests(scripps, EcotypeList, ClassSpeciesList)

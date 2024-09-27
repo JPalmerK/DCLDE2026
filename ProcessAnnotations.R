@@ -14,6 +14,7 @@ source('C:/Users/kaity/Documents/GitHub/DCLDE2026/TestFx.R')
 # 5) SMRU
 # 6) VPFA
 # 7) Scripps
+# 8) UAF
 
 ############################################################################
 # Final output column names
@@ -35,7 +36,9 @@ EcotypeList = c('SRKW', 'BKW', 'OKW', 'NRKW')
 
 
 # Jasper, April, and Jenn have all annotated thse files. There is some overla
-ONC_anno = read.csv('D:\\ONC/Annotations/BarkleyCanyonAnnotations_Public_Final.csv')
+#ONC_anno = read.csv('D:\\ONC/Annotations/BarkleyCanyonAnnotations_Public_Final.csv')
+ONC_anno = read.csv('E:/DCLDE/ONC/Annotations/BarkleyCanyonAnnotations_Public_Final.csv')
+
 
 colnames(ONC_anno)[8]<-'origEcotype'
 
@@ -79,8 +82,6 @@ ONC_anno$KW_certain[ONC_anno$KW ==1 &
                         grepl("\\|", ONC_anno$Species) == TRUE] = 0
 
 
-
-
 ONC_anno$FileBeginSec= as.numeric(ONC_anno$Left.time..sec.)
 ONC_anno$FileEndSec= as.numeric(ONC_anno$Right.time..sec.)
 ONC_anno$HighFreqHz= as.numeric(ONC_anno$Top.freq..Hz.)
@@ -89,8 +90,6 @@ ONC_anno$Dep='BarkLeyCanyon'
 
 # There are a few typos in the original data set resulting in NA values. 
 ONC_anno= ONC_anno[!is.na(ONC_anno$FileBeginSec),]
-
-
 
 
 # Get time of the file
@@ -177,7 +176,7 @@ ONC_anno$UTC[badidx] = as.POSIXct('20141004T102246',
   seconds(0.170)+ONC_anno$FileBeginSec[badidx]
 
 
-dayFolderPath = 'D:\\ONC\\Audio\\BarkleyCanyon'
+dayFolderPath = 'E:\\DCLDE\\ONC\\Audio\\BarkleyCanyon'
 ONC_anno$FilePath = file.path(dayFolderPath,
                               format(ONC_anno$UTC-seconds(ONC_anno$FileBeginSec), "%Y%m%d"),
                               ONC_anno$Soundfile)
@@ -213,11 +212,8 @@ runTests(ONC_anno, EcotypeList, ClassSpeciesList)
 ############################################################################
 
 # No seconds in UTC
-# 
-
-DFO_CRP1 = read.csv('D:/DFO_CRP/annotations/annot_H50bjRcb_SM_det.csv')
-DFO_CRP2 = read.csv('D:/DFO_CRP/annotations/annot_KkHK0R2F_SM_det.csv')
-
+DFO_CRP1 = read.csv('E:/DCLDE/DFO_CRP/Annotations/annot_H50bjRcb_SM_det.csv')
+DFO_CRP2 = read.csv('E:/DCLDE/DFO_CRP/Annotations/annot_KkHK0R2F_SM_det.csv')
 
 DFO_CRP1$Dep='WVanIsl'
 DFO_CRP2$Dep='NorthBc'
@@ -555,7 +551,7 @@ SIMRES$AnnotationLevel = 'Call'
 
 
 # Filepaths- wackadoodle for SIMRES
-dayFolderPath = 'D:\\SIMRES\\Audio\\'
+dayFolderPath = 'E:\\DCLDE\\SIMRES\\Audio\\'
 
 # 1. List all files in the target directory
 allAudio <- list.files(path = dayFolderPath, pattern = "\\.flac$", 
@@ -655,6 +651,14 @@ audio.files = data.frame(
   filename = list.files('D:\\VFPA/StraitofGeorgia_Globus-RobertsBank/',
                         pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
 audio.files$Soundfile =basename(audio.files$filename)
+
+# Create subset of high pass filtered files
+hpf_df <- audio.files[grep("hpf", audio.files$filename, ignore.case = TRUE), ]
+
+
+# Print the subset
+print(hpf_filenames)
+
 
 
 
@@ -965,7 +969,7 @@ if (all(VPFA_HaroSB$Soundfile %in% audio.files$Soundfile)){
 }
 
 # Day folder
-dayFolderPath = 'D:\\VFPA/VFPA-HaroStrait-SB////'
+dayFolderPath = 'E:\\DCLDE\\VFPA\\Audio/VFPA-HaroStrait-SB////'
 VPFA_HaroSB$FilePath = file.path(dayFolderPath, format(
   VPFA_HaroSB$UTC-seconds(VPFA_HaroSB$FileBeginSec),"%Y%m%d"),
   VPFA_HaroSB$Soundfile)
@@ -979,13 +983,14 @@ if (all(VPFA_HaroSB$FileOk)){
 
 VPFA_HaroSB= VPFA_HaroSB[, colOut]
 runTests(VPFA_HaroSB, EcotypeList, ClassSpeciesList)
+
 ###########################################################################
 # SCRIPPS
 ############################################################################
 
 
 # Get a list of files matching the pattern 'annot_Malahat'
-file_list <- list.files(path = 'D:\\Scripps\\Annoations', 
+file_list <- list.files(path = 'D:\\Scripps\\Annotations', 
                         pattern = '*txt', full.names = TRUE)
 
 
@@ -1000,7 +1005,7 @@ scripps <- do.call(rbind, lapply(file_list, function(file) {
   }
 }))
 
-
+scripps$Dep<- as.factor(scripps$Dep)
 
 # Cape Elizabeth and Quinault Canyon
 levels(scripps$Dep)<-c("Cpe_Elz", "Quin_Can")
@@ -1145,7 +1150,7 @@ runTests(SMRU, EcotypeList, ClassSpeciesList)
 ###############################################################################
 
 # Get a list of files matching the pattern 'annot_Malahat'
-file_list <- list.files(path = 'D:/Malahat_JASCO/Annotations/',
+file_list <- list.files(path = 'E:/DCLDE/Malahat_JASCO/Annotations/',
                         pattern = 'annot_Malahat', full.names = TRUE)
 
 
@@ -1201,7 +1206,7 @@ JASCO_malahat$Provider = 'JASCO_Malahat'
 levels(JASCO_malahat$Dep)<-c('STN3', 'STN4', 'STN5', 'STN6')
 
 # Filepaths
-dayFolderPath = 'C:\\TempData\\Malahat'
+dayFolderPath = 'E:\\Malahat'
 JASCO_malahat$FilePath =
   file.path(dayFolderPath, JASCO_malahat$Dep,JASCO_malahat$path)
 
@@ -1218,7 +1223,7 @@ JASCO_malahat = JASCO_malahat[,c(colOut)]
 
 
 # Nix annotations without audio files
-
+""
 JASCO_malahat= JASCO_malahat[JASCO_malahat$FileOk==TRUE,]
 
 
@@ -1243,9 +1248,179 @@ JASCO_malahat= JASCO_malahat[JASCO_malahat$FileOk==TRUE,]
 # filesRm = DFO_CRP[DFO_CRP$keep == FALSE,]
 # file.remove(filesRm$filename)
 
+
+#############################################################################
+# University of Alaska
+#############################################################################
+###############################################################################
+# Now the files are reorganized, this section adds the required headings as 
+# per June 5th email
+###############################################################################
+
+
+# Get a list of annotation files
+file_list <- list.files(path = annot_root,
+                        pattern = '.txt', full.names = TRUE,
+                        recursive = TRUE)
+
+
+
+# Read and concatenate the selection tables  with filename as a separate column (if non-empty)
+UAF <- do.call(rbind, lapply(file_list, function(file) {
+  
+  # read the selection table
+  data <- read.table(file, header = TRUE, sep = '\t')
+  
+  # get the audio file name
+  audioFile<- basename(file)
+  
+  # Hydrophone id
+  Hyd <- strsplit(audioFile, "\\.")[[1]][[1]]
+  
+  if (nrow(data) > 0) {
+    
+    # Add filename as a new column and get deployment from the filename
+    data$Dep <- as.factor(strsplit(dirname(file),'/')[[1]][4])  
+    data$Hyd <- as.factor(Hyd)
+    parts <- strsplit(audioFile, "\\.")[[1]][1:2]
+    filename <- paste(parts[1], parts[2], sep = ".")
+    filename <- paste0(filename, ".wav")
+    
+    #AudioFile is one of the required column headings
+    data$AudioFile =filename
+    
+    # For ecotype later on
+    data$FolderName = dirname(file)
+    return(data)
+  } else {
+    return(NULL)  # Return NULL for empty data frames
+  }
+}))
+
+# remove 'table' from the field recordings
+UAF$AudioFile <- gsub("\\.Table", "", UAF$AudioFile)
+
+
+
+
+# Function to find full path for a single filename
+find_file_path <- function(filename, new_root) {
+  pattern <- filename
+  file_path <- list.files(path = new_root, pattern = pattern, 
+                          recursive = TRUE, full.names = TRUE)
+  if (length(file_path) > 0) {
+    return(file_path)
+  } else {
+    return(NA)  # Return NA if file not found
+  }
+}
+
+
+# Apply the function to each filename in data$filename
+UAF$audio_path <- sapply(UAF$AudioFile, find_file_path, new_root = new_root)
+
+
+# Check that all files are found
+UAF$FileOk  = file.exists(UAF$audio_path) 
+
+
+# Make sure all audio files are present for all annotations
+if (all(UAF$FileOk)){
+  print('All data present for annotations')}else{print('Missing data')}
+
+
+# Missing data, not on the google drive so remove
+UAF = subset(UAF, AudioFile != '20200627_03871.wav')
+
+# Now we have the actual filename and path as well as the deployment and 
+# setup for the ecotype data
+
+
+
+##########################################################################
+# Create the required headings
+
+# Origional Ecotype was not provided and instead based off filename. 
+# KW and KW_certain are easy
+
+
+# This is the actual filename, we had to faff around a bit to get it here
+UAF$filename<-UAF$AudioFile
+
+# To get the timestamps we need to merge the annotations with a separate file
+# list that has the times
+fileTimestamps = read.csv('E:\\DCLDE\\UAF\\Meta\\Myers_DCLDE_2026_files.csv')
+
+
+UAF = merge(UAF, fileTimestamps, by.x = 'AudioFile',
+            by.y='FileName', all.x=TRUE)
+
+
+
+# UTC is the UTC plus the file offset
+UAF$UTC<- as.POSIXct(UAF$UTC)+seconds(UAF$Begin.Time..s.)
+
+UAF$Soundfile<- UAF$AudioFile
+UAF$AnnotationLevel<-'Call'
+
+
+ClassSpeciesList = c('KW', 'HW', 'AB', 'UndBio')
+AnnotationLevelList = c('File', 'Detection', 'Call')
+EcotypeList = c('SRKW', 'BKW', 'OKW', 'NRKW')
+
+# Ok Field recordings don't have an ecotype or population with them...Based
+# on the filename Resident and Southern Alaska resident
+UAF$Ecotype[is.na(UAF$Ecotype)]<- 'Resident'
+UAF$finalizedEcotype =as.factor(UAF$Population)
+
+levels(UAF$finalizedEcotype)<-c('BKW', 'BKW', 'OKW', 'SAR')
+UAF$Ecotype = UAF$finalizedEcotype
+
+
+############################################################################
+# Finish up required headings
+###########################################################################
+colOut = c('Soundfile','Dep','LowFreqHz','HighFreqHz','FileEndSec', 'UTC',
+           'FileBeginSec','ClassSpecies','KW','KW_certain','Ecotype', 'Provider',
+           'AnnotationLevel', 'FilePath', 'FileOk')
+
+
+
+UAF$Hyd<- UAF$Location
+UAF$KW = 1 # only KW annotated
+UAF$ClassSpecies= 'KW' 
+UAF$KW_certain = 1 # Only annotated calls that were certainly KW
+
+UAF$Soundfile<- UAF$AudioFile
+UAF$FileEndSec = UAF$Begin.Time..s.
+UAF$FileEndSec = UAF$End.Time..s.
+UAF$Provider <- 'UAF'
+UAF$AnnotationLevel<- 'Call'
+UAF$FilePath = UAF$audio_path
+UAF$LowFreqHz = UAF$Low.Freq..Hz.
+UAF$HighFreqHz = UAF$High.Freq..Hz.
+UAF$FileBeginSec = UAF$Begin.Time..s.
+
+
+
+runTests(UAF, EcotypeList, ClassSpeciesList)
+
+
+UAF_anno= UAF[,colOut]
+
+
+
+
+
 ###########################################################################
 allAnno = rbind(DFO_CRP, DFO_WDLP, OrcaSound, ONC_anno, scripps, SIMRES,
-                VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG)
+                VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG, SMRU,
+                JASCO_malahat)
+
+# Fun fun, some of the annotations have negative durations... cull them
+allAnno$Duration = allAnno$FileEndSec-allAnno$FileBeginSec
+allAnno$CenterTime = allAnno$FileBeginSec+allAnno$Duration/2
+allAnno = subset(allAnno, Duration>0.01)
 
 
 # Run the checks for allowable values
@@ -1256,8 +1431,7 @@ EcotypeList
 unique(allAnno$KW)
 unique(allAnno$ClassSpecies)
 unique(allAnno$Ecotype)
-
-
+unique(allAnno$Provider)
 
 
 # overall annotations
@@ -1275,42 +1449,150 @@ table(KW_data$Ecotype)
 # Ecotype classifier labels
 # Dataset should include all annotations with an ecotype and/or that are
 # abiotic/biotic/or humpback
-allAnno
 
 
-allAnnoEcotype = subset(allAnno, Ecotype %in% EcotypeList |
-                       ClassSpecies %in% ClassSpeciesList[c(2:4)])
+# This is for a killer whale classifier, primarily
+# allAnnoEcotype = subset(allAnno, Ecotype %in% EcotypeList |
+#                        ClassSpecies %in% ClassSpeciesList[c(2:4)])
+
+allAnnoEcotype = subset(allAnno, KW_certain %in% c(1, NA))
+
 
 allAnnoEcotype$Labels = as.character(allAnnoEcotype$Ecotype)
+
 allAnnoEcotype$Labels[is.na(allAnnoEcotype$Ecotype)] =
   allAnnoEcotype$ClassSpecies[is.na(allAnnoEcotype$Ecotype)] 
+allAnnoEcotype = subset(allAnnoEcotype, Labels != 'KW')
+allAnnoEcotype$Labels = drop(allAnnoEcotype$Labels)
 
 allAnnoEcotype$Labels = as.factor(allAnnoEcotype$Labels)
-
 allAnnoEcotype$label = as.numeric(as.factor(allAnnoEcotype$Labels))-1
 
-label_mapping_traintest <- unique(allAnnoEcotype[c("label", "Labels")])
+# Create another column for the classes vs not killer whale
+allAnnoEcotype$LabelsShort = allAnnoEcotype$Labels
+levels(allAnnoEcotype$LabelsShort)[c(1,3,7)]<- c('Other')
+allAnnoEcotype$labelshort = as.numeric(as.factor(allAnnoEcotype$LabelsShort))-1
+
+# Kick out Malahat
+JASCO_malahatSub = allAnnoEcotype[allAnnoEcotype$Provider == 'JASCO_Malahat',]
+allAnnoEcotype = allAnnoEcotype[allAnnoEcotype$Provider != 'JASCO_Malahat',]
+
+# Now we have an 80/20 split across all labels, awesome. Lets see if we can 
+# Do some basic data augmentation to add missing labels
+labelCounts = table(allAnnoEcotype$Labels)
+
+max(labelCounts)/labelCounts
+
+# Well there are like 68 times more HW than offshores so that would be silly to 
+# augment it that much. I think the goal should be to balance the KW ecotypes
+# then maybe augment those with gaussian noise within Python. Of particular interest
+# is matching SRKW and Biggs
+
+BiggsToAugment = labelCounts[6]-labelCounts[2]
+
+DataAugment = allAnnoEcotype[sample(which(allAnnoEcotype$Labels =='BKW'), BiggsToAugment),]
+# Cool now tweak the duration by 25% of the duration
+
+# Function to generate random offset directly within mutate
+DataAugment <- DataAugment %>%
+  mutate(
+    random_offset = Duration * runif(n(), 0.10, 0.25) * ifelse(runif(n()) > 0.5, 1, -1),
+  )
+
+DataAugment$FileBeginSec = DataAugment$FileBeginSec+DataAugment$random_offset 
+DataAugment$FileEndSec = DataAugment$FileBeginSec+DataAugment$Duration
+DataAugment= DataAugment[,colnames(DataAugment) %in% colnames(allAnnoEcotype)]
+
+allAnnoEcotype = rbind(allAnnoEcotype, DataAugment)
+labelCounts = table(allAnnoEcotype$Labels)
+
+# Do the same for offshores and NRKW
+nrkwToAugment = labelCounts[6]-labelCounts[4]
+
+DataAugment = allAnnoEcotype[sample(which(allAnnoEcotype$Labels =='NRKW'), 
+                                    nrkwToAugment, replace = TRUE),]
+
+# Cool now tweak the duration by 25% of the duration
+
+# Function to generate random offset directly within mutate
+DataAugment <- DataAugment %>%
+  mutate(
+    random_offset = Duration * runif(n(), 0.10, 0.25) * ifelse(runif(n()) > 0.5, 1, -1),
+  )
+
+DataAugment$FileBeginSec = DataAugment$FileBeginSec+DataAugment$random_offset 
+DataAugment$FileEndSec = DataAugment$FileBeginSec+DataAugment$Duration
+DataAugment= DataAugment[,colnames(DataAugment) %in% colnames(allAnnoEcotype)]
+
+allAnnoEcotype = rbind(allAnnoEcotype, DataAugment)
+labelCounts = table(allAnnoEcotype$Labels)
+
+
+# Do the same for offshores
+nrkwToAugment = labelCounts[6]-labelCounts[5]
+
+DataAugment = allAnnoEcotype[sample(which(allAnnoEcotype$Labels =='OKW'), 
+                                    nrkwToAugment, replace = TRUE),]
+
+# Cool now tweak the duration by 25% of the duration
+
+# Function to generate random offset directly within mutate
+DataAugment <- DataAugment %>%
+  mutate(
+    random_offset = Duration * runif(n(), 0.10, 0.25) * ifelse(runif(n()) > 0.5, 1, -1),
+  )
+
+DataAugment$FileBeginSec = DataAugment$FileBeginSec+DataAugment$random_offset 
+DataAugment$FileEndSec = DataAugment$FileBeginSec+DataAugment$Duration
+DataAugment= DataAugment[,colnames(DataAugment) %in% colnames(allAnnoEcotype)]
+
+allAnnoEcotype = rbind(allAnnoEcotype, DataAugment)
+labelCounts = table(allAnnoEcotype$Labels)
+
+
+# Create an 80/20 split across all deployments and labels
+library(caret)
+df_subset <- allAnnoEcotype[, c("Labels", "Dep")]
+
+df_subset$classspecies <- factor(df_subset$Labels)
+
+# Check levels of 'classspecies' and 'deployment'
+levels(df_subset$Labels)
+levels(df_subset$Dep)
+
+set.seed(123)  # Set seed for reproducibility
+
+split <- createDataPartition(y = df_subset$classspecies, p = 0.8, list = FALSE, times = 1)
+
+train <- df_subset[split, ]
+test <- df_subset[-split, ]
+
+# Get the row indices from allAnnoEcotype based on allAnnoEcotype split
+train_indices <- rownames(train)
+test_indices <- rownames(test)
+
+# Subset original dataframe using indices
+train <- allAnnoEcotype[train_indices, ]
+test <- allAnnoEcotype[test_indices, ]
+train$traintest ='Train'
+test$traintest ='Test'
+
+
+write.csv(subset(train, traintest=='Train'), row.names = FALSE,
+          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTrain2.csv')
+
+write.csv(subset(test, traintest=='Test'),  row.names = FALSE,
+          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTest2.csv')
+
+
 
 
 # Malahat validation
-JASCO_malahatSub = subset(allAnnoEcotype, Provider== 'JASCO_Malahat')
 JASCO_malahatSub$traintest = 'Train'
+write.csv(JASCO_malahatSub,row.names = FALSE,'C:/Users/kaity/Documents/GitHub/Ecotype/Malahat2.csv')
 
 
-label_mapping_Validation <- unique(JASCO_malahatSub[c("label", "Labels")])
-write.csv(JASCO_malahatSub, 'C:/Users/kaity/Documents/GitHub/Ecotype/Malahat.csv')
 
-
-# Not even going to try to build a balanced dataset
-allAnnoEcotype$traintest =  'Train'
-allAnnoEcotype$traintest[sample(1:nrow(allAnnoEcotype),
-                         floor(nrow(allAnnoEcotype)*0.2), replace = FALSE)]= 'Test'
-
-write.csv(subset(allAnnoEcotype, traintest=='Train'), row.names = FALSE,
-          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTrain.csv')
-
-write.csv(subset(allAnnoEcotype, traintest=='Test'),  row.names = FALSE,
-          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTest.csv')
 
 
 
