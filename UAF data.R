@@ -216,6 +216,10 @@ colOut = c('Soundfile','Dep','LowFreqHz','HighFreqHz','FileEndSec', 'UTC',
            'AnnotationLevel', 'FilePath', 'FileOk')
 
 
+UAF$HydId<-UAF$Hyd
+UAF$HydId<-as.factor(UAF$HydId)
+levels(UAF$HydId)[9:59]<-'Field'
+
 
 UAF$Hyd<- UAF$Location
 UAF$KW = 1 # only KW annotated

@@ -215,6 +215,11 @@ runTests(ONC_anno, EcotypeList, ClassSpeciesList)
 DFO_CRP1 = read.csv('E:/DCLDE/DFO_CRP/Annotations/annot_H50bjRcb_SM_det.csv')
 DFO_CRP2 = read.csv('E:/DCLDE/DFO_CRP/Annotations/annot_KkHK0R2F_SM_det.csv')
 
+# DFO_CRP2 = read.table( header = TRUE, sep = '\t',
+#                        'E:/DCLDE/DFO_CRP/Annotations/Origional/DFOCRP_KkHK0R2F-NML1_ValidatedDetections.txt')
+ 
+
+
 DFO_CRP1$Dep='WVanIsl'
 DFO_CRP2$Dep='NorthBc'
 
@@ -1048,7 +1053,7 @@ runTests(scripps, EcotypeList, ClassSpeciesList)
 #############################################################################
 
 # Strait fo Georgia
-SMRU_SRKW<- read.csv('D:\\SMRU/annotations/annot_LimeKiln-Encounters_man_det.csv')
+SMRU_SRKW<- read.csv('E:\\DCLDESMRU/annotations/annot_LimeKiln-Encounters_man_det.csv')
 SMRU_HW<- read.csv('D:\\SMRU/annotations/annot_LimeKiln-Humpback_man_det.csv')
 
 SMRU <- rbind(SMRU_HW, SMRU_SRKW)
