@@ -10,7 +10,7 @@ library(lubridate)
 source('C:/Users/kaity/Documents/GitHub/DCLDE2026/TestFx.R')
 
 # Downloaded Audio locationf
-root_dir ='E:\\DCLDE\\UAF\\Myers_DCLDE_2026_killer_whale_data\\Myers_DCLDE_2026_killer_whale_data'
+root_dir ='E:\\DCLDE\\UAF\\BIN\\Myers_DCLDE_2026_killer_whale_data'
 
 # New Audio Location (where to move the organized files too)
 new_root ='E:\\DCLDE\\UAF\\Audio'
@@ -83,11 +83,19 @@ for(ii in 1:nrow(UAF)){
   }
 }
 
+
 ###############################################################################
 # Now the files are reorganized, this section adds the required headings as 
 # per June 5th email
 ###############################################################################
+# Downloaded Audio locationf
+root_dir ='E:\\DCLDE\\UAF\\BIN\\Myers_DCLDE_2026_killer_whale_data'
 
+# New Audio Location (where to move the organized files too)
+new_root ='E:\\DCLDE\\UAF\\Audio'
+
+# Annotations location (already moved all the annotations here)
+annot_root =  'E:\\DCLDE\\UAF\\Annotations\\'
 
 # Get a list of annotation files
 file_list <- list.files(path = annot_root,
