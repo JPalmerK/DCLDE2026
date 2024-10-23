@@ -25,7 +25,7 @@ colOut = c('Soundfile','Dep','LowFreqHz','HighFreqHz','FileEndSec', 'UTC',
 
 ClassSpeciesList = c('KW', 'HW', 'AB', 'UndBio')
 AnnotationLevelList = c('File', 'Detection', 'Call')
-EcotypeList = c('SRKW', 'BKW', 'OKW', 'NRKW')
+EcotypeList = c('SRKW', 'BKW', 'OKW', 'NRKW', 'SAR')
 # For the class species, options are: KW, HW, AB, and UndBio
 # Killer whale, humpback whale, abiotic, and unknown Bio which includes 
 # Other dolphin acoustically active species ranging from fin whales, to 
@@ -660,7 +660,7 @@ VPFA_SoG <- VPFA_SoG %>%
 
 # List which files are not in annotations list
 audio.files = data.frame(
-  filename = list.files('E:\\DCLDE\\VFPA/StraitofGeorgia_Globus-RobertsBank/',
+  filename = list.files('E:\\DCLDE\\VFPA/Audio/StraitofGeorgia_Globus-RobertsBank/',
                         pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
 audio.files$Soundfile =basename(audio.files$filename)
 
@@ -675,7 +675,7 @@ hpf_df <- audio.files[grep("hpf", audio.files$filename, ignore.case = TRUE), ]
 
 
 # Day folder
-dayFolderPath = 'E:\\DCLDE\\VFPA/StraitofGeorgia_Globus-RobertsBank/'
+dayFolderPath = 'E:\\DCLDE\\VFPA/Audio/StraitofGeorgia_Globus-RobertsBank/'
 VPFA_SoG$FilePath = file.path(dayFolderPath,
                               format(VPFA_SoG$UTC-seconds(VPFA_SoG$FileBeginSec), 
                                      "%Y%m%d"),
@@ -783,7 +783,7 @@ if (all(VPFA_BoundaryPass$Soundfile %in% audio.files$Soundfile)){
 
 
 # Day folder
-dayFolderPath = 'E:\\DCLDE\\VFPA/BoundaryPass//'
+dayFolderPath = 'E:\\DCLDE\\VFPA/Audio/BoundaryPass'
 VPFA_BoundaryPass$FilePath = file.path(dayFolderPath, format(
   VPFA_BoundaryPass$UTC-seconds(VPFA_BoundaryPass$FileBeginSec),"%Y%m%d"),
                               VPFA_BoundaryPass$Soundfile)
@@ -813,12 +813,7 @@ VPFA_HaroNB <- VPFA_HaroNB %>%
                      format = "%Y%m%dT%H%M%S", tz= 'UTC')
   )
 
-
-
-
-
 VPFA_HaroNB$ClassSpecies<- VPFA_HaroNB$sound_id_species
-
 
 VPFA_HaroNB$ClassSpecies[VPFA_HaroNB$sound_id_species %in%
                                  c('KW?', "HW/KW?",  "KW/HW?","KW/PWSD?")] ='KW'
@@ -858,19 +853,15 @@ VPFA_HaroNB$Ecotype[VPFA_HaroNB$kw_ecotype == 'TKW?'] ='BKW'
 colnames(VPFA_HaroNB)[c(5,6,3,4,1)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
                                              'FileEndSec', 'Soundfile')
 
-
-
 VPFA_HaroNB$AnnotationLevel = 'Call'
 VPFA_HaroNB$dur = VPFA_HaroNB$FileEndSec-VPFA_HaroNB$FileBeginSec
 VPFA_HaroNB$end_time = VPFA_HaroNB$UTC+ seconds(VPFA_HaroNB$dur)
 VPFA_HaroNB$Dep='HaroStraitNorth'
 VPFA_HaroNB$Provider = 'JASCO_VFPA'
 
-
-
 # List which files are not in annotations list
 audio.files = data.frame(
-  filename = list.files('E:\\DCLDE\\VFPA/VFPA-HaroStrait-NB/',
+  filename = list.files('E:\\DCLDE\\VFPA/Audio/VFPA-HaroStrait-NB/',
                         pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
 audio.files$Soundfile =basename(audio.files$filename)
 
@@ -886,7 +877,7 @@ if (all(VPFA_HaroNB$Soundfile %in% audio.files$Soundfile)){
 
 
 # Day folder
-dayFolderPath = 'E:\\DCLDE\\VFPA/VFPA-HaroStrait-NB/'
+dayFolderPath = 'E:\\DCLDE\\VFPA/Audio/VFPA-HaroStrait-NB/'
 VPFA_HaroNB$FilePath = file.path(dayFolderPath, format(
   VPFA_HaroNB$UTC-seconds(VPFA_HaroNB$FileBeginSec),"%Y%m%d"),
   VPFA_HaroNB$Soundfile)
@@ -967,7 +958,7 @@ VPFA_HaroSB$Provider = 'JASCO_VFPA'
 
 # List which files are not in annotations list
 audio.files = data.frame(
-  filename = list.files('E:\\DCLDE\\VFPA/VFPA-HaroStrait-SB/',
+  filename = list.files('E:\\DCLDE\\VFPA/Audio/VFPA-HaroStrait-SB/',
                         pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
 audio.files$Soundfile =basename(audio.files$filename)
 
@@ -1265,23 +1256,35 @@ JASCO_malahat= JASCO_malahat[JASCO_malahat$FileOk==TRUE,]
 
 #############################################################################
 # University of Alaska
-#############################################################################
-###############################################################################
-# Now the files are reorganized, this section adds the required headings as 
-# per June 5th email
-###############################################################################
+# Downloaded Audio locationf
+root_dir ='E:\\DCLDE\\UAF\\BIN\\Myers_DCLDE_2026_killer_whale_data'
 
+# New Audio Location (where to move the organized files too)
+new_root ='E:\\DCLDE\\UAF\\Audio'
 
 # Annotations location (already moved all the annotations here)
 annot_root =  'E:\\DCLDE\\UAF\\Annotations\\'
-# Audio root location
-new_root ='E:\\DCLDE\\UAF\\Audio'
-
 
 # Get a list of annotation files
 file_list <- list.files(path = annot_root,
                         pattern = '.txt', full.names = TRUE,
                         recursive = TRUE)
+
+
+# Downloaded Audio locationf
+root_dir ='E:\\DCLDE\\UAF\\BIN\\Myers_DCLDE_2026_killer_whale_data'
+
+# New Audio Location (where to move the organized files too)
+new_root ='E:\\DCLDE\\UAF\\Audio'
+
+# Annotations location (already moved all the annotations here)
+annot_root =  'E:\\DCLDE\\UAF\\Annotations\\'
+
+# Get a list of annotation files
+file_list <- list.files(path = annot_root,
+                        pattern = '.txt', full.names = TRUE,
+                        recursive = TRUE)
+
 
 
 # Read and concatenate the selection tables  with filename as a separate column (if non-empty)
@@ -1338,17 +1341,8 @@ find_file_path <- function(filename, new_root) {
 # Apply the function to each filename in data$filename
 UAF$audio_path <- sapply(UAF$AudioFile, find_file_path, new_root = new_root)
 
+
 # Check that all files are found
-UAF$FileOk  = file.exists(UAF$audio_path) 
-
-# Doesn't fix the damn filed files
-fildIdx = which(is.na(UAF$audio_path))
-
-for(ii in fildIdx){
-  UAF$audio_path[ii]<-  paste0(new_root, '/Field_recordings/', 
-                               strsplit(as.character(UAF$Hyd[ii]), '_')[[1]][1],
-                              '/', UAF$AudioFile[ii]) 
-}
 UAF$FileOk  = file.exists(UAF$audio_path) 
 
 
@@ -1394,7 +1388,7 @@ UAF$AnnotationLevel<-'Call'
 
 ClassSpeciesList = c('KW', 'HW', 'AB', 'UndBio')
 AnnotationLevelList = c('File', 'Detection', 'Call')
-EcotypeList = c('SRKW', 'BKW', 'OKW', 'NRKW')
+EcotypeList = c('SRKW', 'BKW', 'OKW', 'NRKW', 'SAR')
 
 # Ok Field recordings don't have an ecotype or population with them...Based
 # on the filename Resident and Southern Alaska resident
@@ -1408,6 +1402,10 @@ UAF$Ecotype = UAF$finalizedEcotype
 ############################################################################
 # Finish up required headings
 ###########################################################################
+colOut = c('Soundfile','Dep','LowFreqHz','HighFreqHz','FileEndSec', 'UTC',
+           'FileBeginSec','ClassSpecies','KW','KW_certain','Ecotype', 'Provider',
+           'AnnotationLevel', 'FilePath', 'FileOk')
+
 
 UAF$HydId<-UAF$Hyd
 UAF$HydId<-as.factor(UAF$HydId)
@@ -1434,15 +1432,17 @@ UAF$FileBeginSec = UAF$Begin.Time..s.
 runTests(UAF, EcotypeList, ClassSpeciesList)
 
 
-UAF_anno= UAF[,colOut]
-
+UAF= UAF[,colOut]
 
 
 
 ###########################################################################
+# allAnno = rbind(DFO_CRP, DFO_WDLP, OrcaSound, ONC_anno, scripps, SIMRES,
+#                 VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG, SMRU,
+#                 JASCO_malahat)
+
 allAnno = rbind(DFO_CRP, DFO_WDLP, OrcaSound, ONC_anno, scripps, SIMRES,
-                VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG, SMRU,
-                JASCO_malahat)
+                VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG, SMRU, UAF)
 
 # Fun fun, some of the annotations have negative durations... cull them
 allAnno$Duration = allAnno$FileEndSec-allAnno$FileBeginSec
