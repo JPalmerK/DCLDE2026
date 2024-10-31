@@ -86,7 +86,7 @@ ONC_anno$FileBeginSec= as.numeric(ONC_anno$Left.time..sec.)
 ONC_anno$FileEndSec= as.numeric(ONC_anno$Right.time..sec.)
 ONC_anno$HighFreqHz= as.numeric(ONC_anno$Top.freq..Hz.)
 ONC_anno$LowFreqHz= as.numeric(ONC_anno$Bottom.freq..Hz.)
-ONC_anno$Dep='BarkLeyCanyon'
+ONC_anno$Dep='BarkleyCanyon'
 
 # There are a few typos in the original data set resulting in NA values. 
 ONC_anno= ONC_anno[!is.na(ONC_anno$FileBeginSec),]
@@ -178,7 +178,6 @@ ONC_anno$UTC[badidx] = as.POSIXct('20141004T102246',
 
 dayFolderPath = 'E:\\DCLDE\\ONC\\Audio\\BarkleyCanyon'
 ONC_anno$FilePath = file.path(dayFolderPath,
-                              format(ONC_anno$UTC-seconds(ONC_anno$FileBeginSec), "%Y%m%d"),
                               ONC_anno$Soundfile)
 ONC_anno$AnnotationLevel = 'call'
 
@@ -186,14 +185,6 @@ ONC_anno$FileOk  = file.exists(ONC_anno$FilePath)
 
 ONC_anno$FileUTC =ONC_anno$UTC- seconds(as.numeric(ONC_anno$FileBeginSec))
 
-
-
-
-# Create a list of the 'not ok files'
-missingData = ONC_anno[ONC_anno$FileOk== FALSE,]
-
-# Remove the annotations for the missing files
-ONC_anno = ONC_anno[!ONC_anno$Soundfile %in% missingData$Soundfile,]
 
 
 ONC_anno= ONC_anno[,colOut]
@@ -530,7 +521,6 @@ OrcaSound = OrcaSound[,c(colOut)]
 
 runTests(OrcaSound, EcotypeList, ClassSpeciesList)
 
-rm(list =c('problemData', 'problemIdx', 'dayFolderPath'))
 
 ###########################################################################
 # SIMRES
@@ -1313,8 +1303,6 @@ JASCO_malahat= JASCO_malahat[JASCO_malahat$FileOk==TRUE,]
 
 
 # Downloaded Audio location
-root_dir ='E:\\DCLDE\\UAF\\Myers_DCLDE_2026_killer_whale_data'
-
 # New Audio Location (where to move the organized files too)
 new_root ='E:\\DCLDE\\UAF\\Audio'
 
@@ -1453,9 +1441,9 @@ UAF$LowFreqHz = UAF$Low.Freq..Hz.
 UAF$HighFreqHz = UAF$High.Freq..Hz.
 UAF$FileBeginSec = UAF$Begin.Time..s.
 
-UAF$audio_path = file.path(new_root, UAF$Hyd, UAF$Soundfile)
+UAF$FilePath = file.path(new_root, UAF$Hyd, UAF$Soundfile)
 # Check that all files are found
-UAF$FileOk  = file.exists(UAF$audio_path)
+UAF$FileOk  = file.exists(UAF$FilePath)
 
 
 # Make sure all audio files are present for all annotations
