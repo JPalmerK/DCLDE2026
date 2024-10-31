@@ -459,7 +459,9 @@ OrcaSound$start_time_s = as.numeric(OrcaSound$start_time_s)
 
 OrcaSound$DateTime <- with(OrcaSound, paste(date, pst_or_master_tape_identifier))
 
-OrcaSound$UTC <-NaN
+OrcaSound$UTC <-as.POSIXct(OrcaSound$DateTime[1], 
+                           tz = "America/Los_Angeles", 
+                           format = "%m/%d/%Y %H:%M:%S")
 
 for(ii in 1:length(unique(OrcaSound$dataset))){
   
@@ -470,7 +472,8 @@ for(ii in 1:length(unique(OrcaSound$dataset))){
   timeVals = OrcaSound$pst_or_master_tape_identifier[idx]
   
   if(ii %in% c(1,2,3,5,6,7,8,9)){
-    UTCDate = as.POSIXct(paste(dateVals, timeVals), tz = "America/Los_Angeles", 
+    UTCDate = as.POSIXct(paste(dateVals, timeVals), 
+                         tz = "America/Los_Angeles", 
                          format = "%m/%d/%Y %H:%M:%S")+
       OrcaSound$start_time_s[idx]}
   if(ii %in% c(4)){
@@ -481,6 +484,8 @@ for(ii in 1:length(unique(OrcaSound$dataset))){
   OrcaSound$UTC[idx]<-UTCDate
 }
 
+#Now convert all times from pacific to UTC
+attr(OrcaSound$UTC, "tzone") <- "UTC" 
 
 # Add class species stuff
 OrcaSound$ClassSpecies = OrcaSound$Species
