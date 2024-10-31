@@ -302,16 +302,30 @@ DFO_CRP2$Dep='NorthBc'
 WVIidx = which(DFO_CRP$Dep == 'WVanIsl')
 NBCidx = which(DFO_CRP$Dep != 'WVanIsl')
 
-DFO_CRP$FilePath[WVIidx] = 
-  file.path(dayFolderPath_WV, format(DFO_CRP$UTC[WVIidx], "%Y%m%d"),
+DFO_CRP$FilePath[WVIidx] =
+  file.path(dayFolderPath_WV,
             DFO_CRP$Soundfile[WVIidx])
-DFO_CRP$FilePath[NBCidx] = 
-  file.path(dayFolderPath_NBC, format(DFO_CRP$UTC[NBCidx], "%Y%m%d"),
+DFO_CRP$FilePath[NBCidx] =
+  file.path(dayFolderPath_NBC,
             DFO_CRP$Soundfile[NBCidx])
 
-DFO_CRP$FileOk  = file.exists(DFO_CRP$FilePath) 
 
-DFO_CRP$dur = DFO_CRP$FileEndSec  - DFO_CRP$FileBeginSec
+
+# DFO_CRP$FilePath[WVIidx] = 
+#   file.path(dayFolderPath_WV, format(DFO_CRP$UTC[WVIidx], "%Y%m%d"),
+#             DFO_CRP$Soundfile[WVIidx])
+# DFO_CRP$FilePath[NBCidx] = 
+#   file.path(dayFolderPath_NBC, format(DFO_CRP$UTC[NBCidx], "%Y%m%d"),
+#             DFO_CRP$Soundfile[NBCidx])
+
+DFO_CRP$FileOk  = file.exists(DFO_CRP$FilePath) 
+# Make sure all audio files are present for all annotations
+if (all(DFO_CRP$FileOk)){
+  print('All data present for annotations')}else{print('Missing data')}
+
+runTests(DFO_CRP, EcotypeList, ClassSpeciesList)
+
+#DFO_CRP$dur = DFO_CRP$FileEndSec  - DFO_CRP$FileBeginSec
 
 # # Sort and then identify overlaps
 # DFO_CRP <- DFO_CRP %>%
@@ -320,11 +334,8 @@ DFO_CRP$dur = DFO_CRP$FileEndSec  - DFO_CRP$FileBeginSec
 
 rm(list= c('DFO_CRP1', 'DFO_CRP2'))
 
-# Make sure all audio files are present for all annotations
-if (all(DFO_CRP$FileOk)){
-  print('All data present for annotations')}else{print('Missing data')}
 
-runTests(DFO_CRP, EcotypeList, ClassSpeciesList)
+
 
 DFO_CRP = DFO_CRP[, c(colOut)]
 # 
@@ -419,10 +430,16 @@ levels(DFO_WDLP$DepFolder)<-c('CMN_2022-03-08_20220629_ST_utc',
 
 # Filepaths
 dayFolderPath = 'E:\\DCLDE\\DFO_WDLP\\Audio'
+
 DFO_WDLP$FilePath = 
   file.path(dayFolderPath, DFO_WDLP$DepFolder, 
-            format(DFO_WDLP$UTC, "%Y%m%d"),
             DFO_WDLP$Soundfile)
+
+
+# DFO_WDLP$FilePath = 
+#   file.path(dayFolderPath, DFO_WDLP$DepFolder, 
+#             format(DFO_WDLP$UTC, "%Y%m%d"),
+#             DFO_WDLP$Soundfile)
 
 DFO_WDLP$FileOk  = file.exists(DFO_WDLP$FilePath) 
 
@@ -484,11 +501,13 @@ OrcaSound$FileEndSec = OrcaSound$start_time_s+OrcaSound$duration_s
 
 OrcaSound$AnnotationLevel = ifelse(OrcaSound$ClassSpecies == 'KW',
                                    'Detection', 'File')
+levels(OrcaSound$location)
+
 
 # Filepaths
 dayFolderPath = 'E:\\DCLDE\\OrcaSound\\Audio'
 OrcaSound$FilePath = 
-  file.path(dayFolderPath,OrcaSound$Soundfile)
+  file.path(dayFolderPath,OrcaSound$Dep, OrcaSound$Soundfile)
 
 OrcaSound$FileOk  = file.exists(OrcaSound$FilePath) 
 
@@ -677,9 +696,12 @@ hpf_df <- audio.files[grep("hpf", audio.files$filename, ignore.case = TRUE), ]
 # Day folder
 dayFolderPath = 'E:\\DCLDE\\VFPA/Audio/StraitofGeorgia_Globus-RobertsBank/'
 VPFA_SoG$FilePath = file.path(dayFolderPath,
-                              format(VPFA_SoG$UTC-seconds(VPFA_SoG$FileBeginSec), 
-                                     "%Y%m%d"),
                               VPFA_SoG$Soundfile)
+
+# VPFA_SoG$FilePath = file.path(dayFolderPath,
+#                               format(VPFA_SoG$UTC-seconds(VPFA_SoG$FileBeginSec), 
+#                                      "%Y%m%d"),
+#                               VPFA_SoG$Soundfile)
 
 VPFA_SoG <- VPFA_SoG %>%
   mutate(FileOk = file.exists(FilePath))
@@ -784,9 +806,12 @@ if (all(VPFA_BoundaryPass$Soundfile %in% audio.files$Soundfile)){
 
 # Day folder
 dayFolderPath = 'E:\\DCLDE\\VFPA/Audio/BoundaryPass'
-VPFA_BoundaryPass$FilePath = file.path(dayFolderPath, format(
-  VPFA_BoundaryPass$UTC-seconds(VPFA_BoundaryPass$FileBeginSec),"%Y%m%d"),
-                              VPFA_BoundaryPass$Soundfile)
+VPFA_BoundaryPass$FilePath = file.path(dayFolderPath,
+  VPFA_BoundaryPass$Soundfile)
+
+# VPFA_BoundaryPass$FilePath = file.path(dayFolderPath, format(
+#   VPFA_BoundaryPass$UTC-seconds(VPFA_BoundaryPass$FileBeginSec),"%Y%m%d"),
+#                               VPFA_BoundaryPass$Soundfile)
 
 VPFA_BoundaryPass <- VPFA_BoundaryPass %>%
   mutate(FileOk = file.exists(FilePath))
@@ -878,9 +903,12 @@ if (all(VPFA_HaroNB$Soundfile %in% audio.files$Soundfile)){
 
 # Day folder
 dayFolderPath = 'E:\\DCLDE\\VFPA/Audio/VFPA-HaroStrait-NB/'
-VPFA_HaroNB$FilePath = file.path(dayFolderPath, format(
-  VPFA_HaroNB$UTC-seconds(VPFA_HaroNB$FileBeginSec),"%Y%m%d"),
+VPFA_HaroNB$FilePath = file.path(dayFolderPath,
   VPFA_HaroNB$Soundfile)
+
+# VPFA_HaroNB$FilePath = file.path(dayFolderPath, format(
+#   VPFA_HaroNB$UTC-seconds(VPFA_HaroNB$FileBeginSec),"%Y%m%d"),
+#   VPFA_HaroNB$Soundfile)
 
 VPFA_HaroNB <- VPFA_HaroNB %>%
   mutate(FileOk = file.exists(FilePath))
@@ -973,9 +1001,12 @@ if (all(VPFA_HaroSB$Soundfile %in% audio.files$Soundfile)){
 
 # Day folder
 dayFolderPath = 'E:\\DCLDE\\VFPA\\Audio/VFPA-HaroStrait-SB/'
-VPFA_HaroSB$FilePath = file.path(dayFolderPath, format(
-  VPFA_HaroSB$UTC-seconds(VPFA_HaroSB$FileBeginSec),"%Y%m%d"),
+VPFA_HaroSB$FilePath = file.path(dayFolderPath, 
   VPFA_HaroSB$Soundfile)
+
+# VPFA_HaroSB$FilePath = file.path(dayFolderPath, format(
+#   VPFA_HaroSB$UTC-seconds(VPFA_HaroSB$FileBeginSec),"%Y%m%d"),
+#   VPFA_HaroSB$Soundfile)
 
 VPFA_HaroSB <- VPFA_HaroSB %>%
   mutate(FileOk = file.exists(FilePath))
@@ -1044,6 +1075,9 @@ scripps$UTC = as.POSIXct(sub(".*_(\\d{6}_\\d{6})_.*", "\\1",
 
 scripps$FileOk = file.exists(scripps$FilePath)
 
+# Make sure all audio files are present for all annotations
+if (all(scripps$FileOk)){
+  print('All data present for annotations')}else{print('Missing data')}
 
 scripps = scripps[, colOut]
 runTests(scripps, EcotypeList, ClassSpeciesList)
@@ -1052,7 +1086,7 @@ runTests(scripps, EcotypeList, ClassSpeciesList)
 # SMRU Consulting
 #############################################################################
 
-# Strait fo Georgia
+
 SMRU_SRKW<- read.csv('E:\\DCLDE\\SMRU/annotations/annot_LimeKiln-Encounters_man_det.csv')
 SMRU_HW<- read.csv('E:\\DCLDE\\SMRU/annotations/annot_LimeKiln-Humpback_man_det.csv')
 
@@ -1134,7 +1168,7 @@ audio.files$Soundfile =basename(audio.files$filename)
 # Day folder
 dayFolderPath = 'E:\\DCLDE\\SMRU/Audio/Lime Kiln/'
 SMRU$FilePath = file.path(dayFolderPath,
-                          SMRU$path)
+                          SMRU$Soundfile)
 
 SMRU <- SMRU %>%
   mutate(FileOk = file.exists(FilePath))
@@ -1255,9 +1289,26 @@ JASCO_malahat= JASCO_malahat[JASCO_malahat$FileOk==TRUE,]
 
 
 #############################################################################
-# University of Alaska
-# Downloaded Audio locationf
-root_dir ='E:\\DCLDE\\UAF\\BIN\\Myers_DCLDE_2026_killer_whale_data'
+# University of Alaska data not organized by location. UAFdata.r used to 
+# organize at least into individual hydrophons or field locations
+# 
+# # Downloaded Audio locationf
+# root_dir ='E:\\DCLDE\\UAF\\BIN\\Myers_DCLDE_2026_killer_whale_data'
+# 
+# # New Audio Location (where to move the organized files too)
+# new_root ='E:\\DCLDE\\UAF\\Audio'
+# 
+# # Annotations location (already moved all the annotations here)
+# annot_root =  'E:\\DCLDE\\UAF\\Annotations\\'
+# 
+# # Get a list of annotation files
+# file_list <- list.files(path = annot_root,
+#                         pattern = '.txt', full.names = TRUE,
+#                         recursive = TRUE)
+
+
+# Downloaded Audio location
+root_dir ='E:\\DCLDE\\UAF\\Myers_DCLDE_2026_killer_whale_data'
 
 # New Audio Location (where to move the organized files too)
 new_root ='E:\\DCLDE\\UAF\\Audio'
@@ -1269,22 +1320,6 @@ annot_root =  'E:\\DCLDE\\UAF\\Annotations\\'
 file_list <- list.files(path = annot_root,
                         pattern = '.txt', full.names = TRUE,
                         recursive = TRUE)
-
-
-# Downloaded Audio locationf
-root_dir ='E:\\DCLDE\\UAF\\BIN\\Myers_DCLDE_2026_killer_whale_data'
-
-# New Audio Location (where to move the organized files too)
-new_root ='E:\\DCLDE\\UAF\\Audio'
-
-# Annotations location (already moved all the annotations here)
-annot_root =  'E:\\DCLDE\\UAF\\Annotations\\'
-
-# Get a list of annotation files
-file_list <- list.files(path = annot_root,
-                        pattern = '.txt', full.names = TRUE,
-                        recursive = TRUE)
-
 
 
 # Read and concatenate the selection tables  with filename as a separate column (if non-empty)
@@ -1319,10 +1354,10 @@ UAF <- do.call(rbind, lapply(file_list, function(file) {
   }
 }))
 
-# remove 'table' from the field recordings
+# remove 'table' from the field recordings 
+UAF$AudioFile <- gsub("\\.Table1", "", UAF$AudioFile)
+# and "table1"... shoot me in the face please
 UAF$AudioFile <- gsub("\\.Table", "", UAF$AudioFile)
-
-
 
 
 # Function to find full path for a single filename
@@ -1339,23 +1374,9 @@ find_file_path <- function(filename, new_root) {
 
 
 # Apply the function to each filename in data$filename
-UAF$audio_path <- sapply(UAF$AudioFile, find_file_path, new_root = new_root)
+# UAF$audio_path <- sapply(UAF$AudioFile, find_file_path, new_root = new_root)
 
 
-# Check that all files are found
-UAF$FileOk  = file.exists(UAF$audio_path) 
-
-
-# Make sure all audio files are present for all annotations
-if (all(UAF$FileOk)){
-  print('All data present for annotations')}else{print('Missing data')}
-
-
-# Missing data, not on the google drive so remove
-UAF = subset(UAF, AudioFile != '20200627_03871.wav')
-
-# Now we have the actual filename and path as well as the deployment and 
-# setup for the ecotype data
 
 
 
@@ -1427,6 +1448,14 @@ UAF$LowFreqHz = UAF$Low.Freq..Hz.
 UAF$HighFreqHz = UAF$High.Freq..Hz.
 UAF$FileBeginSec = UAF$Begin.Time..s.
 
+UAF$audio_path = file.path(new_root, UAF$Hyd, UAF$Soundfile)
+# Check that all files are found
+UAF$FileOk  = file.exists(UAF$audio_path)
+
+
+# Make sure all audio files are present for all annotations
+if (all(UAF$FileOk)){
+  print('All data present for annotations')}else{print('Missing data')}
 
 
 runTests(UAF, EcotypeList, ClassSpeciesList)
