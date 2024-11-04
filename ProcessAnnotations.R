@@ -1426,7 +1426,16 @@ UAF$HydId<-as.factor(UAF$HydId)
 levels(UAF$HydId)[9:59]<-'Field'
 
 
-UAF$Hyd<- UAF$Location
+UAF$Dep<- UAF$Location
+# Two different hydrophones used in field deployments not recognized in the
+# file names
+idxHTI = which(UAF$UTC< as.POSIXct('2021-06-15') & UAF$Dep == 'Field')
+idxSoundTrap = which(UAF$UTC> as.POSIXct('2021-06-15') & UAF$Dep == 'Field')
+
+UAF$Dep[idxHTI] = 'Field_HTI'
+UAF$Dep[idxSoundTrap]= 'Field_SondTrap'
+
+
 UAF$KW = 1 # only KW annotated
 UAF$ClassSpecies= 'KW' 
 UAF$KW_certain = 1 # Only annotated calls that were certainly KW
@@ -1440,6 +1449,11 @@ UAF$FilePath = UAF$audio_path
 UAF$LowFreqHz = UAF$Low.Freq..Hz.
 UAF$HighFreqHz = UAF$High.Freq..Hz.
 UAF$FileBeginSec = UAF$Begin.Time..s.
+
+# Change deployment to be the combination of the location
+# and they hydrophone
+UAF$temp = as.factor(paste0(UAF$Location,"_", UAF$HydId))
+UAF$temp <- factor(UAF$temp, levels(UAF$temp)[c(2,3,4,6,5,7,9,8,10,1)])
 
 UAF$FilePath = file.path(new_root, UAF$Hyd, UAF$Soundfile)
 # Check that all files are found
