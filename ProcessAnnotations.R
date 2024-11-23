@@ -25,7 +25,7 @@ colOut = c('Soundfile','Dep','LowFreqHz','HighFreqHz','FileEndSec', 'UTC',
 
 ClassSpeciesList = c('KW', 'HW', 'AB', 'UndBio')
 AnnotationLevelList = c('File', 'Detection', 'Call')
-EcotypeList = c('SRKW', 'BKW', 'OKW', 'NRKW', 'SAR')
+EcotypeList = c('SRKW', 'TKW', 'OKW', 'NRKW', 'SAR')
 # For the class species, options are: KW, HW, AB, and UndBio
 # Killer whale, humpback whale, abiotic, and unknown Bio which includes 
 # Other dolphin acoustically active species ranging from fin whales, to 
@@ -35,9 +35,8 @@ EcotypeList = c('SRKW', 'BKW', 'OKW', 'NRKW', 'SAR')
 # 1) ONC- data from globus
 
 
-# Jasper, April, and Jenn have all annotated thse files. There is some overla
-#ONC_anno = read.csv('E:\\DCLDE\\ONC/Annotations/BarkleyCanyonAnnotations_Public_Final.csv')
-ONC_anno = read.csv('E:/DCLDE/ONC/Annotations/BarkleyCanyonAnnotations_Public_Final.csv')
+# Jasper, April, and Jenn have all annotated thse files.
+ONC_anno = read.csv('E:/DCLDE/ONC/Annotations/BarkleyCanyonAnnotations_Public_Final_cleaned.csv')
 
 
 colnames(ONC_anno)[8]<-'origEcotype'
@@ -49,19 +48,20 @@ ONC_anno$ClassSpecies[grepl("\\|", ONC_anno$Species)]= 'UndBio'
 ONC_anno$ClassSpecies[grepl("Mn", ONC_anno$Species)]= 'HW'
 ONC_anno$ClassSpecies[grepl("Oo", ONC_anno$Species)]= 'KW'
 ONC_anno$ClassSpecies[grepl("\\|Oo", ONC_anno$Species)]= 'KW'
+
 ONC_anno$ClassSpecies[ONC_anno$Species %in% c('BA', 'Bp', 'MY','OD', 'DE',
                                               'UN', 'NN', 'Pm', 'Bm','Gg','CE',
                                               'AN', 'Lo')]= 'UndBio'
 
 
 # Set clicks and buzzes to undbio
-ONC_anno$ClassSpecies[ONC_anno$ClassSpecies =='KW' & 
-                        ONC_anno$Call.Type %in% c('BZ', 'CK')]= 'UndBio'
+# ONC_anno$ClassSpecies[ONC_anno$ClassSpecies =='KW' & 
+#                         ONC_anno$Call.Type %in% c('BZ', 'CK')]= 'UndBio'
 
 # Add Ecotype 
 ONC_anno$Ecotype<-NA
 ONC_anno$Ecotype[ONC_anno$origEcotype == 'SRKW'] ='SRKW'
-ONC_anno$Ecotype[ONC_anno$origEcotype == 'BKW'] ='BKW'
+ONC_anno$Ecotype[ONC_anno$origEcotype == 'TKW'] ='TKW'
 ONC_anno$Ecotype[ONC_anno$origEcotype == 'OKW'] ='OKW'
 
 # Set the ecotype to NA
@@ -88,11 +88,7 @@ ONC_anno$HighFreqHz= as.numeric(ONC_anno$Top.freq..Hz.)
 ONC_anno$LowFreqHz= as.numeric(ONC_anno$Bottom.freq..Hz.)
 ONC_anno$Dep='BarkleyCanyon'
 
-# There are a few typos in the original data set resulting in NA values. 
-ONC_anno= ONC_anno[!is.na(ONC_anno$FileBeginSec),]
-
-
-# Get time of the file
+# Numerous formatting errors in the timestamp 
 ONC_anno <- ONC_anno %>%
   mutate(filename = as.character(Soundfile),  # Make sure the column is treated as character
          UTC = as.POSIXct(sub(".*_(\\d{8}T\\d{6}\\.\\d{3}Z).*", "\\1", filename),
@@ -206,10 +202,6 @@ runTests(ONC_anno, EcotypeList, ClassSpeciesList)
 DFO_CRP1 = read.csv('E:/DCLDE/DFO_CRP/Annotations/annot_H50bjRcb_SM_det.csv')
 DFO_CRP2 = read.csv('E:/DCLDE/DFO_CRP/Annotations/annot_KkHK0R2F_SM_det.csv')
 
-# DFO_CRP2 = read.table( header = TRUE, sep = '\t',
-#                        'E:/DCLDE/DFO_CRP/Annotations/Origional/DFOCRP_KkHK0R2F-NML1_ValidatedDetections.txt')
- 
-
 
 DFO_CRP1$Dep='WVanIsl'
 DFO_CRP2$Dep='NorthBc'
@@ -217,10 +209,17 @@ DFO_CRP2$Dep='NorthBc'
 
 DFO_CRP = rbind(DFO_CRP1, DFO_CRP2)
 
+
+DFO_CRP$UTC = as.POSIXct(DFO_CRP$utc, format="%Y-%m-%d %H:%M:%OS", tz = 'UTC')+
+  seconds((as.numeric(DFO_CRP$utc_ms)/1000))
+
 table(DFO_CRP$sound_id_species)
 
-
 DFO_CRP$ClassSpecies = DFO_CRP$sound_id_species
+
+
+
+
 
 # Clean up the abiotic counds
 DFO_CRP$ClassSpecies[
@@ -252,7 +251,7 @@ DFO_CRP$KW_certain[DFO_CRP$sound_id_species %in% c("KW/PWSD?","HW/KW?",
 # Add Ecotype- note uncertain ecotypes getting their own guess
 DFO_CRP$Ecotype = as.factor(DFO_CRP$kw_ecotype)
 levels(DFO_CRP$Ecotype)<-c(NA, 'NRKW', 'NRKW', 'OKW', 'OKW', 'SRKW', 'SRKW',
-                            'BKW', 'BKW', NA)
+                            'TKW', 'TKW', NA)
 DFO_CRP$Ecotype[DFO_CRP$KW ==0]<-NA
 
 # If the species is unsure then the ecotype is unsure
@@ -267,8 +266,7 @@ DFO_CRP$FileBeginSec = DFO_CRP$start
 DFO_CRP$FileEndSec = DFO_CRP$end
 DFO_CRP$LowFreqHz = DFO_CRP$freq_min
 DFO_CRP$HighFreqHz = DFO_CRP$freq_max
-DFO_CRP$UTC = as.POSIXct(DFO_CRP$utc, format="%Y-%m-%d %H:%M:%OS", tz = 'UTC')+
-  seconds(as.numeric(DFO_CRP$utc_ms)/1000)
+
 DFO_CRP$Provider = 'DFO_CRP'
 DFO_CRP$AnnotationLevel = 'Call'
 
@@ -281,8 +279,8 @@ DFO_CRP <- DFO_CRP %>%
   mutate(overlap = lead(UTC) <= lag(end_time, default = first(end_time)))
 
 
-dayFolderPath_WV = 'E:\\DCLDE\\DFO_CRP\\Audio\\DFOCRP_H50bjRcb-WCV1'
-dayFolderPath_NBC = 'E:\\DCLDE\\DFO_CRP\\Audio\\DFOCRP_KkHK0R2F-NML1'
+dayFolderPath_WV = 'E:\\DCLDE\\DFO_CRP\\Audio\\WVanIsl'
+dayFolderPath_NBC = 'E:\\DCLDE\\DFO_CRP\\Audio\\NorthBc'
 
 DFO_CRP$FilePath = 'blarg'
 
@@ -293,12 +291,8 @@ DFO_CRP2$Dep='NorthBc'
 WVIidx = which(DFO_CRP$Dep == 'WVanIsl')
 NBCidx = which(DFO_CRP$Dep != 'WVanIsl')
 
-DFO_CRP$FilePath[WVIidx] =
-  file.path(dayFolderPath_WV,
-            DFO_CRP$Soundfile[WVIidx])
-DFO_CRP$FilePath[NBCidx] =
-  file.path(dayFolderPath_NBC,
-            DFO_CRP$Soundfile[NBCidx])
+DFO_CRP$FilePath[WVIidx] =file.path(dayFolderPath_WV, DFO_CRP$Soundfile[WVIidx])
+DFO_CRP$FilePath[NBCidx] = file.path(dayFolderPath_NBC, DFO_CRP$Soundfile[NBCidx])
 
 
 
@@ -326,28 +320,31 @@ runTests(DFO_CRP, EcotypeList, ClassSpeciesList)
 rm(list= c('DFO_CRP1', 'DFO_CRP2'))
 
 
-
-
 DFO_CRP = DFO_CRP[, c(colOut)]
 # 
 # # List which files are not in annotations list
 # audio.files = data.frame(
-#   filename = list.files('E:\\DCLDE2026\\DFO_CRP\\Audio\\',
+#   filename = list.files('E:\\DCLDE\\DFO_CRP\\Audio\\',
 #            pattern ='.flac', recursive = TRUE, include.dirs = TRUE))
+# 
+# 
+
 # audio.files$Soundfile =basename(audio.files$filename)
-# audio.files$fullfile = paste0('E:\\DCLDE2026\\DFO_CRP\\Audio\\', audio.files$Soundfile )
-# DFO_CRP = merge(audio.files, DFO_Pilk, by ='Soundfile', all.x = TRUE)
+# audio.files$fullfile = paste0('E:\\DCLDE\\DFO_CRP\\Audio\\', audio.files$filename)
+# audio.files$keep = audio.files$Soundfile %in% DFO_CRP$Soundfile 
 # 
-# DFO_CRP$keep = DFO_CRP$Soundfile %in% DFO_Pilk$Soundfile
+# #Move unnecesary audio to bin
+# audio.files$newLoc = file.path('E:\\CRP_Bin', audio.files$Soundfile)
 # 
-# # keep the file after all the start files, just incase
-# idxExtraKeep = which(DFO_CRP$keep ==TRUE)
+# library(filesstrings)
+# for(ii in 9991:nrow(audio.files)){
+#   if (audio.files$keep[ii]== FALSE){
+#     move_files(audio.files$fullfile[ii], audio.files$newLoc[ii])
+#     print(paste('Moved file ', audio.files$Soundfile[ii]))
+#   }
+# }
 # 
-# DFO_CRP$keep[idxExtraKeep+1] = TRUE
-# 
-# # Remove files without annotations
-# filesRm = DFO_CRP[DFO_CRP$keep == FALSE,]
-# file.remove(filesRm$fullfile)
+
 
 ############################################################################
 # DFO Yurk
@@ -387,7 +384,7 @@ DFO_WDLP$FileBeginSec = DFO_WDLP$elapsed_time_seconds
 DFO_WDLP$FileEndSec = DFO_WDLP$FileBeginSec+DFO_WDLP$duration/1000
 
 DFO_WDLP$Ecotype = as.factor(DFO_WDLP$species)
-levels(DFO_WDLP$Ecotype)<-c(NA, 'NRKW', 'SRKW', 'BKW', NA, NA)
+levels(DFO_WDLP$Ecotype)<-c(NA, 'NRKW', 'SRKW', 'TKW', NA, NA)
 
 DFO_WDLP$ClassSpecies = as.factor(DFO_WDLP$species)
 levels(DFO_WDLP$ClassSpecies)<-c('HW', 'KW', 'KW', 'KW', 'UndBio', 'AB')
@@ -649,8 +646,8 @@ VPFA_SoG$UTC = VPFA_SoG$UTC+ seconds(as.numeric(VPFA_SoG$start))
 VPFA_SoG$Ecotype = NA
 VPFA_SoG$Ecotype[VPFA_SoG$kw_ecotype == 'SRKW'] ='SRKW'
 VPFA_SoG$Ecotype[VPFA_SoG$kw_ecotype == 'SRKW?'] ='SRKW'
-VPFA_SoG$Ecotype[VPFA_SoG$kw_ecotype == 'KWT?'] ='BKW'
-VPFA_SoG$Ecotype[VPFA_SoG$kw_ecotype == 'TKW?'] ='BKW'
+VPFA_SoG$Ecotype[VPFA_SoG$kw_ecotype == 'KWT?'] ='TKW'
+VPFA_SoG$Ecotype[VPFA_SoG$kw_ecotype == 'TKW?'] ='TKW'
 
 
 colnames(VPFA_SoG)[c(5,6,3,4,1)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
@@ -762,9 +759,9 @@ VPFA_BoundaryPass$UTC = VPFA_BoundaryPass$UTC+
 VPFA_BoundaryPass$Ecotype = NA
 VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'SRKW'] ='SRKW'
 VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'SRKW?'] ='SRKW'
-VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'KWT?'] ='BKW'
-VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'TKW?'] ='BKW'
-VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'TKW'] ='BKW'
+VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'KWT?'] ='TKW'
+VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'TKW?'] ='TKW'
+VPFA_BoundaryPass$Ecotype[VPFA_BoundaryPass$kw_ecotype == 'TKW'] ='TKW'
 
 
 
@@ -865,8 +862,8 @@ VPFA_HaroNB$UTC = VPFA_HaroNB$UTC+
 VPFA_HaroNB$Ecotype = NA
 VPFA_HaroNB$Ecotype[VPFA_HaroNB$kw_ecotype == 'SRKW'] ='SRKW'
 VPFA_HaroNB$Ecotype[VPFA_HaroNB$kw_ecotype == 'SRKW?'] ='SRKW'
-VPFA_HaroNB$Ecotype[VPFA_HaroNB$kw_ecotype == 'KWT?'] ='BKW'
-VPFA_HaroNB$Ecotype[VPFA_HaroNB$kw_ecotype == 'TKW?'] ='BKW'
+VPFA_HaroNB$Ecotype[VPFA_HaroNB$kw_ecotype == 'KWT?'] ='TKW'
+VPFA_HaroNB$Ecotype[VPFA_HaroNB$kw_ecotype == 'TKW?'] ='TKW'
 
 
 
@@ -963,8 +960,8 @@ VPFA_HaroSB$UTC = VPFA_HaroSB$UTC+
 VPFA_HaroSB$Ecotype = NA
 VPFA_HaroSB$Ecotype[VPFA_HaroSB$kw_ecotype == 'SRKW'] ='SRKW'
 VPFA_HaroSB$Ecotype[VPFA_HaroSB$kw_ecotype == 'SRKW?'] ='SRKW'
-VPFA_HaroSB$Ecotype[VPFA_HaroSB$kw_ecotype == 'KWT?'] ='BKW'
-VPFA_HaroSB$Ecotype[VPFA_HaroSB$kw_ecotype == 'TKW?'] ='BKW'
+VPFA_HaroSB$Ecotype[VPFA_HaroSB$kw_ecotype == 'KWT?'] ='TKW'
+VPFA_HaroSB$Ecotype[VPFA_HaroSB$kw_ecotype == 'TKW?'] ='TKW'
 
 
 colnames(VPFA_HaroSB)[c(5,6,3,4,1)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
@@ -1041,8 +1038,8 @@ levels(scripps$Dep)<-c("Cpe_Elz", "Quin_Can")
 
 # Set the initial ecotypes then match the format
 scripps$Ecotype <- as.factor(gsub(".*_(.*)\\.wav", "\\1", scripps$Begin.File))
-levels(scripps$Ecotype)<-c('BKW', 'BKW', 'BKW', 'BKW', 'OKW', 'SRKW',
-                           'SRKW','BKW', 'BKW')
+levels(scripps$Ecotype)<-c('TKW', 'TKW', 'TKW', 'TKW', 'OKW', 'SRKW',
+                           'SRKW','TKW', 'TKW')
 scripps$Ecotype[scripps$ClassSpecies != ""]<- NaN
 
 scripps$ClassSpecies= as.factor(scripps$ClassSpecies)
@@ -1130,8 +1127,8 @@ SMRU$UTC = SMRU$UTC+ seconds(as.numeric(SMRU$start))
 SMRU$Ecotype = NA
 SMRU$Ecotype[SMRU$kw_ecotype == 'SRKW'] ='SRKW'
 SMRU$Ecotype[SMRU$kw_ecotype == 'SRKW?'] ='SRKW'
-SMRU$Ecotype[SMRU$kw_ecotype == 'KWT?'] ='BKW'
-SMRU$Ecotype[SMRU$kw_ecotype == 'TKW?'] ='BKW'
+SMRU$Ecotype[SMRU$kw_ecotype == 'KWT?'] ='TKW'
+SMRU$Ecotype[SMRU$kw_ecotype == 'TKW?'] ='TKW'
 
 
 colnames(SMRU)[c(5,6,3,4,1)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
@@ -1212,7 +1209,7 @@ levels(JASCO_malahat$ClassSpecies)<-c('AB', 'HW','KW','HW',  'KW', 'KW',
                                       'UndBio', 'UndBio','AB', 'AB', 'AB')
 
 JASCO_malahat$Ecotype = as.factor(JASCO_malahat$kw_ecotype)
-levels(JASCO_malahat$Ecotype)<- c(NA,'SRKW', NA, 'BKW', NA)
+levels(JASCO_malahat$Ecotype)<- c(NA,'SRKW', NA, 'TKW', NA)
 
 JASCO_malahat$KW =ifelse(JASCO_malahat$ClassSpecies %in% c('KW', 'KW?'), 1, 0)
 
@@ -1402,14 +1399,14 @@ UAF$AnnotationLevel<-'Call'
 
 ClassSpeciesList = c('KW', 'HW', 'AB', 'UndBio')
 AnnotationLevelList = c('File', 'Detection', 'Call')
-EcotypeList = c('SRKW', 'BKW', 'OKW', 'NRKW', 'SAR')
+EcotypeList = c('SRKW', 'TKW', 'OKW', 'NRKW', 'SAR')
 
 # Ok Field recordings don't have an ecotype or population with them...Based
 # on the filename Resident and Southern Alaska resident
 UAF$Ecotype[is.na(UAF$Ecotype)]<- 'Resident'
 UAF$finalizedEcotype =as.factor(UAF$Population)
 
-levels(UAF$finalizedEcotype)<-c('BKW', 'BKW', 'OKW', 'SAR')
+levels(UAF$finalizedEcotype)<-c('TKW', 'TKW', 'OKW', 'SAR')
 UAF$Ecotype = UAF$finalizedEcotype
 
 
@@ -1429,9 +1426,11 @@ levels(UAF$HydId)[9:59]<-'Field'
 UAF$Dep<- UAF$Location
 # Two different hydrophones used in field deployments not recognized in the
 # file names
+nonFiledIdx = which(UAF$Dep != 'Field')
 idxHTI = which(UAF$UTC< as.POSIXct('2021-06-15') & UAF$Dep == 'Field')
 idxSoundTrap = which(UAF$UTC> as.POSIXct('2021-06-15') & UAF$Dep == 'Field')
 
+UAF$Dep[nonFiledIdx]<- paste0(UAF$Dep[nonFiledIdx], '_', UAF$HydId[nonFiledIdx])
 UAF$Dep[idxHTI] = 'Field_HTI'
 UAF$Dep[idxSoundTrap]= 'Field_SondTrap'
 
@@ -1455,7 +1454,7 @@ UAF$FileBeginSec = UAF$Begin.Time..s.
 UAF$temp = as.factor(paste0(UAF$Location,"_", UAF$HydId))
 UAF$temp <- factor(UAF$temp, levels(UAF$temp)[c(2,3,4,6,5,7,9,8,10,1)])
 
-UAF$FilePath = file.path(new_root, UAF$Hyd, UAF$Soundfile)
+UAF$FilePath = file.path(new_root, UAF$Location, UAF$Soundfile)
 # Check that all files are found
 UAF$FileOk  = file.exists(UAF$FilePath)
 
@@ -1480,10 +1479,17 @@ UAF= UAF[,colOut]
 allAnno = rbind(DFO_CRP, DFO_WDLP, OrcaSound, ONC_anno, scripps, SIMRES,
                 VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG, SMRU, UAF)
 
+colnames(allAnno)[2]<-'Dataset'
+
+
+# double check all audio files are there
+allAnno$FileOk  = file.exists(allAnno$FilePath)
+
+
 # Fun fun, some of the annotations have negative durations... cull them
 allAnno$Duration = allAnno$FileEndSec-allAnno$FileBeginSec
 allAnno$CenterTime = allAnno$FileBeginSec+allAnno$Duration/2
-allAnno = subset(allAnno, Duration>0.01)
+allAnno = subset(allAnno, Duration>0.1)
 
 
 # Run the checks for allowable values
@@ -1597,7 +1603,7 @@ max(labelCounts)/labelCounts
 
 BiggsToAugment = labelCounts[6]-labelCounts[2]
 
-DataAugment = allAnnoEcotype[sample(which(allAnnoEcotype$Labels =='BKW'), BiggsToAugment),]
+DataAugment = allAnnoEcotype[sample(which(allAnnoEcotype$Labels =='TKW'), BiggsToAugment),]
 # Cool now tweak the duration by 25% of the duration
 
 # Function to generate random offset directly within mutate
@@ -1773,7 +1779,7 @@ ggplot(data = allAnno[!is.na(allAnno$ClassSpecies),],
 KW_data$Month = month(KW_data$UTC)
 KW_data$Month <- month.name[KW_data$Month]
 
-ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'BKW'))
+ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'TKW'))
                        , aes(x= month(UTC)))+
   geom_histogram(aes(fill  = as.factor(Ecotype)))+
   facet_wrap(~Provider, scales = 'free_y')+
@@ -1786,7 +1792,7 @@ KW_data$Month <- month(ymd(KW_data$UTC))  # Extract month number from the UTC da
 
 
 
-ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'BKW')),
+ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'TKW')),
        aes(x = Month)) +  # Use Month instead of month(UTC)
   geom_histogram(aes(fill = Ecotype)) +
   facet_wrap(~Provider, scales = 'free_y') +
@@ -1801,7 +1807,7 @@ library(zoo)
 KW_data <- KW_data %>%
   mutate(month = month(UTC))
 
-ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'BKW')),
+ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'TKW')),
        aes(as.yearmon(UTC), fill=Ecotype)) + 
   geom_bar(position = position_dodge(width  = 1/12),
            fill= as.factor(Ecotype), 
