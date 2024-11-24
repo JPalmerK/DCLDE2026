@@ -1486,6 +1486,8 @@ colnames(allAnno)[2]<-'Dataset'
 allAnno$FileOk  = file.exists(allAnno$FilePath)
 
 
+
+
 # Fun fun, some of the annotations have negative durations... cull them
 allAnno$Duration = allAnno$FileEndSec-allAnno$FileBeginSec
 allAnno$CenterTime = allAnno$FileBeginSec+allAnno$Duration/2
@@ -1601,7 +1603,7 @@ max(labelCounts)/labelCounts
 # then maybe augment those with gaussian noise within Python. Of particular interest
 # is matching SRKW and Biggs
 
-BiggsToAugment = labelCounts[6]-labelCounts[2]
+BiggsToAugment = labelCounts[6]-labelCounts[7]
 
 DataAugment = allAnnoEcotype[sample(which(allAnnoEcotype$Labels =='TKW'), BiggsToAugment),]
 # Cool now tweak the duration by 25% of the duration
@@ -1620,7 +1622,7 @@ allAnnoEcotype = rbind(allAnnoEcotype, DataAugment)
 labelCounts = table(allAnnoEcotype$Labels)
 
 # Do the same for offshores and NRKW
-nrkwToAugment = labelCounts[6]-labelCounts[4]
+nrkwToAugment = labelCounts[6]-labelCounts[3]
 
 DataAugment = allAnnoEcotype[sample(which(allAnnoEcotype$Labels =='NRKW'), 
                                     nrkwToAugment, replace = TRUE),]
@@ -1642,10 +1644,10 @@ labelCounts = table(allAnnoEcotype$Labels)
 
 
 # Do the same for offshores
-nrkwToAugment = labelCounts[6]-labelCounts[5]
+okwToAugment = labelCounts[6]-labelCounts[4]
 
 DataAugment = allAnnoEcotype[sample(which(allAnnoEcotype$Labels =='OKW'), 
-                                    nrkwToAugment, replace = TRUE),]
+                                    okwToAugment, replace = TRUE),]
 
 # Cool now tweak the duration by 25% of the duration
 
@@ -1665,13 +1667,14 @@ labelCounts = table(allAnnoEcotype$Labels)
 
 # Create an 80/20 split across all deployments and labels
 library(caret)
-df_subset <- allAnnoEcotype[, c("Labels", "Dep")]
+df_subset <- allAnnoEcotype[, c("Labels", "Dataset")]
 
 df_subset$classspecies <- factor(df_subset$Labels)
 
 # Check levels of 'classspecies' and 'deployment'
 levels(df_subset$Labels)
-levels(df_subset$Dep)
+df_subset$Dataset = as.factor(df_subset$Dataset)
+levels(df_subset$Dataset)
 
 set.seed(123)  # Set seed for reproducibility
 
@@ -1692,10 +1695,10 @@ test$traintest ='Test'
 
 
 write.csv(subset(train, traintest=='Train'), row.names = FALSE,
-          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTrain2.csv')
+          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTrain3.csv')
 
 write.csv(subset(test, traintest=='Test'),  row.names = FALSE,
-          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTest2.csv')
+          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTest3.csv')
 
 
 
