@@ -1281,30 +1281,23 @@ JASCO_malahat= JASCO_malahat[JASCO_malahat$FileOk==TRUE,]
 
 
 #############################################################################
-# University of Alaska data not organized by location. UAFdata.r used to 
-# organize at least into individual hydrophons or field locations
-# 
-# # Downloaded Audio locationf
-# root_dir ='E:\\DCLDE\\UAF\\BIN\\Myers_DCLDE_2026_killer_whale_data'
-# 
-# # New Audio Location (where to move the organized files too)
-# new_root ='E:\\DCLDE\\UAF\\Audio'
-# 
-# # Annotations location (already moved all the annotations here)
-# annot_root =  'E:\\DCLDE\\UAF\\Annotations\\'
-# 
-# # Get a list of annotation files
-# file_list <- list.files(path = annot_root,
-#                         pattern = '.txt', full.names = TRUE,
-#                         recursive = TRUE)
+#University of Alaska data not organized by location. UAFdata.r used to
+#organize at least into individual hydrophons or field locations
 
-
-# Downloaded Audio location
 # New Audio Location (where to move the organized files too)
 new_root ='E:\\DCLDE\\UAF\\Audio'
 
 # Annotations location (already moved all the annotations here)
 annot_root =  'E:\\DCLDE\\UAF\\Annotations\\'
+
+# Load the deployment info
+UAF_depInfo = read.csv('E:\\DCLDE\\UAF\\Meta\\Myers_DCLDE_2026_files.csv')
+
+
+# Get a list of annotation files
+file_list <- list.files(path = annot_root,
+                        pattern = '.txt', full.names = TRUE,
+                        recursive = TRUE)
 
 # Get a list of annotation files
 file_list <- list.files(path = annot_root,
@@ -1350,44 +1343,11 @@ UAF$AudioFile <- gsub("\\.Table1", "", UAF$AudioFile)
 UAF$AudioFile <- gsub("\\.Table", "", UAF$AudioFile)
 
 
-# Function to find full path for a single filename
-find_file_path <- function(filename, new_root) {
-  pattern <- filename
-  file_path <- list.files(path = new_root, pattern = pattern, 
-                          recursive = TRUE, full.names = TRUE)
-  if (length(file_path) > 0) {
-    return(file_path)
-  } else {
-    return(NA)  # Return NA if file not found
-  }
-}
-
-
-# Apply the function to each filename in data$filename
-# UAF$audio_path <- sapply(UAF$AudioFile, find_file_path, new_root = new_root)
-
-
-
-
-
-##########################################################################
-# Create the required headings
-
-# Origional Ecotype was not provided and instead based off filename. 
-# KW and KW_certain are easy
-
-
-# This is the actual filename, we had to faff around a bit to get it here
-UAF$filename<-UAF$AudioFile
-
-# To get the timestamps we need to merge the annotations with a separate file
-# list that has the times
-fileTimestamps = read.csv('E:\\DCLDE\\UAF\\Meta\\Myers_DCLDE_2026_files.csv')
-
-
-UAF = merge(UAF, fileTimestamps, by.x = 'AudioFile',
+# Merge the files
+UAF = merge(UAF, UAF_depInfo, by.x = 'AudioFile',
             by.y='FileName', all.x=TRUE)
 
+UAF$FilePath<- file.path('E:\\DCLDE\\UAF\\Audio', UAF$Location, UAF$AudioFile)
 
 
 # UTC is the UTC plus the file offset
@@ -1454,7 +1414,7 @@ UAF$FileBeginSec = UAF$Begin.Time..s.
 UAF$temp = as.factor(paste0(UAF$Location,"_", UAF$HydId))
 UAF$temp <- factor(UAF$temp, levels(UAF$temp)[c(2,3,4,6,5,7,9,8,10,1)])
 
-UAF$FilePath = file.path(new_root, UAF$Location, UAF$Soundfile)
+UAF$FilePath = file.path('E:/DCLDE/UAF/Audio', UAF$Location, UAF$AudioFile)
 # Check that all files are found
 UAF$FileOk  = file.exists(UAF$FilePath)
 
@@ -1571,6 +1531,14 @@ library(caret)
 # Replace this with your actual `allAnnoEcotype` data
 set.seed(123)
 
+
+# Fun fun, some of the annotations have negative durations... cull them
+allAnno$Duration = allAnno$FileEndSec-allAnno$FileBeginSec
+allAnno$CenterTime = allAnno$FileBeginSec+allAnno$Duration/2
+allAnno = subset(allAnno, Duration>0.1)
+
+
+
 # Only KW certain and other classes
 allAnnoEcotype = subset(allAnno, KW_certain %in% c(1, NA))
 
@@ -1595,7 +1563,10 @@ allAnnoEcotype$label = as.numeric(as.factor(allAnnoEcotype$Labels))-1
 # Add a `Date` column to group by UTC date
 allAnnoEcotype <- allAnnoEcotype %>% mutate(Date = as.Date(UTC))
 
-# Filter out Malahat which will be used for evaluation
+# Separate Malahat data
+malahat_data <- allAnnoEcotype %>% filter(Provider == "JASCO_Malahat")
+
+# Filter out Malahat from the main dataset
 allAnnoEcotype <- allAnnoEcotype %>% filter(Provider != "JASCO_Malahat")
 
 
@@ -1645,12 +1616,14 @@ table(train$Labels)  # Check label balance in train
 table(test$Labels)   # Check label balance in test
 
 # Export train test sets
-write.csv(subset(train, traintest=='Train'), row.names = FALSE,
-          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTrain3.csv')
+write.csv(train, row.names = FALSE,
+          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\RTO_train.csv')
 
-write.csv(subset(test, traintest=='Test'),  row.names = FALSE,
-          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTest3.csv')
+write.csv(test,  row.names = FALSE,
+          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\RTO_test.csv')
 
+write.csv(malahat_data, row.names = FALSE, 
+          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\RTO_malahat.csv')
 
 
 ############################################################################

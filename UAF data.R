@@ -18,9 +18,12 @@ new_root ='E:\\DCLDE\\UAF\\Audio'
 # Annotations location (already moved all the annotations here)
 annot_root =  'E:\\DCLDE\\UAF\\Annotations\\'
 
+# Load the deployment info
+UAF_depInfo = read.csv('E:\\DCLDE\\UAF\\BIN\\Myers_DCLDE_2026_killer_whale_data\\Myers_DCLDE_2026_files.csv')
+
 
 # Downloaded Annotations (already organized)
-file_list <- list.files(path = annot_root,
+UAF_file_list <- list.files(path = annot_root,
                         pattern = '.txt', full.names = TRUE,
                         recursive = TRUE)
 
@@ -28,7 +31,7 @@ file_list <- list.files(path = annot_root,
 
 # Read and concatenate the selection tables files with filename as a 
 # separate column (if non-empty)
-UAF <- do.call(rbind, lapply(file_list, function(file) {
+UAF <- do.call(rbind, lapply(UAF_file_list, function(file) {
   data <- read.table(file, header = TRUE, sep = '\t')
   audioFile<- basename(file)
   Hyd <- strsplit(audioFile, "\\.")[[1]][[1]]
@@ -48,6 +51,10 @@ UAF <- do.call(rbind, lapply(file_list, function(file) {
   }
 }))
 
+# remove 'table' from the field recordings 
+UAF$AudioFile <- gsub("\\.Table1", "", UAF$AudioFile)
+# and "table1"... shoot me in the face please
+UAF$AudioFile <- gsub("\\.Table", "", UAF$AudioFile)
 
 # Function to find full path for a single filename
 find_file_path <- function(filename, root_dir) {
@@ -61,8 +68,57 @@ find_file_path <- function(filename, root_dir) {
   }
 }
 
+
 # Apply the function to each filename in data$filename
-UAF$audio_path <- sapply(UAF$AudioFile, find_file_path, root_dir = root_dir)
+UAF$audio_path <- sapply(UAF$AudioFile, find_file_path,
+                         root_dir = 'E:\\DCLDE\\UAF\\BIN')
+
+
+
+
+
+# Merge the files
+aa = merge(UAF, UAF_depInfo, by= 'AudioFile', all.x = TRUE)
+aa$new_loc = file.path('E:\\DCLDE\\UAF\\Audio', aa$Location, aa$AudioFile)
+aa$new_path = file.path('E:\\DCLDE\\UAF\\Audio', aa$Location)
+
+bb= aa[!duplicated(aa$new_loc),]
+bb = bb[bb$Location != 'Field',]
+
+# # copy the files into deployments based on hydrophones
+# for(ii in 1:nrow(bb)){
+#   new_location = bb$new_loc[ii]
+#   
+#   # check that it needs to be moved
+#   if(!is.na(bb$audio_path[ii])){
+#     if (!file.exists(new_location)) {
+#       # Create the directory if it doesn't exist
+#       dir.create(new_location, recursive = TRUE)  
+#     }
+#     # Copy the file to the new location
+#     file.copy(bb$audio_path[ii], new_location, overwrite = TRUE) 
+#   }
+# }
+
+# copy the files into deployments based on hydrophones
+for(ii in 1:nrow(bb)){
+
+  
+  file.copy(bb$audio_path[ii],  bb$new_loc[ii], overwrite = TRUE)
+  print(ii)
+}
+
+
+
+# List the files in the old and new directories, make sure everything is fine
+new_files <- list.files(path = 'E:\\DCLDE\\UAF\\Audio', pattern = pattern, 
+                        recursive = TRUE, full.names = TRUE)
+
+
+
+
+
+
 
 # Ok now create a new path based on the hydrophone location
 newRoot = 'E:\\DCLDE\\UAF\\Audio'
