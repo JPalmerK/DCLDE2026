@@ -1472,9 +1472,9 @@ UAF= UAF[,colOut]
 
 
 ###########################################################################
-# allAnno = rbind(DFO_CRP, DFO_WDLP, OrcaSound, ONC_anno, scripps, SIMRES,
-#                 VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG, SMRU,
-#                 JASCO_malahat)
+allAnno = rbind(DFO_CRP, DFO_WDLP, OrcaSound, ONC_anno, scripps, SIMRES,
+                VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG, SMRU,
+                UAF,JASCO_malahat)
 
 allAnno = rbind(DFO_CRP, DFO_WDLP, OrcaSound, ONC_anno, scripps, SIMRES,
                 VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG, SMRU, UAF)
@@ -1561,155 +1561,95 @@ for(ii in 2:nrow(noAnnotations)){
 #  Train test set
 #############################################################################
 
-# Ecotype classifier labels
-# Dataset should include all annotations with an ecotype and/or that are
-# abiotic/biotic/or humpback
 
+library(dplyr)
+library(lubridate)
+library(stringr)
+library(caret)
 
-# This is for a killer whale classifier, primarily
-# allAnnoEcotype = subset(allAnno, Ecotype %in% EcotypeList |
-#                        ClassSpecies %in% ClassSpeciesList[c(2:4)])
+# Example input data
+# Replace this with your actual `allAnnoEcotype` data
+set.seed(123)
 
+# Only KW certain and other classes
 allAnnoEcotype = subset(allAnno, KW_certain %in% c(1, NA))
 
-
+# Create the proper labels
+# Use the ecotype where available
 allAnnoEcotype$Labels = as.character(allAnnoEcotype$Ecotype)
 
+# Use ClassSpecies where not available
 allAnnoEcotype$Labels[is.na(allAnnoEcotype$Ecotype)] =
   allAnnoEcotype$ClassSpecies[is.na(allAnnoEcotype$Ecotype)] 
 allAnnoEcotype = subset(allAnnoEcotype, Labels != 'KW')
-allAnnoEcotype$Labels = drop(allAnnoEcotype$Labels)
-
 allAnnoEcotype$Labels = as.factor(allAnnoEcotype$Labels)
+
+# Change levels to AB, HW, RKW, TKW, OKW, UndBio
+levels(allAnnoEcotype$Labels)<-c('AB', 'HW', 'RKW', 'OKW', 'RKW', 'RKW', 
+                                 'TKW', 'UndBio')
+
+# Numeric labels for training
 allAnnoEcotype$label = as.numeric(as.factor(allAnnoEcotype$Labels))-1
 
-# Create another column for the classes vs not killer whale
-allAnnoEcotype$LabelsShort = allAnnoEcotype$Labels
-levels(allAnnoEcotype$LabelsShort)[c(1,3,7)]<- c('Other')
-allAnnoEcotype$labelshort = as.numeric(as.factor(allAnnoEcotype$LabelsShort))-1
 
-# Kick out Malahat
-JASCO_malahatSub = allAnnoEcotype[allAnnoEcotype$Provider == 'JASCO_Malahat',]
-allAnnoEcotype = allAnnoEcotype[allAnnoEcotype$Provider != 'JASCO_Malahat',]
+# Add a `Date` column to group by UTC date
+allAnnoEcotype <- allAnnoEcotype %>% mutate(Date = as.Date(UTC))
 
-# Now we have an 80/20 split across all labels, awesome. Lets see if we can 
-# Do some basic data augmentation to add missing labels
-labelCounts = table(allAnnoEcotype$Labels)
-
-max(labelCounts)/labelCounts
-
-# Well there are like 68 times more HW than offshores so that would be silly to 
-# augment it that much. I think the goal should be to balance the KW ecotypes
-# then maybe augment those with gaussian noise within Python. Of particular interest
-# is matching SRKW and Biggs
-
-BiggsToAugment = labelCounts[6]-labelCounts[7]
-
-DataAugment = allAnnoEcotype[sample(which(allAnnoEcotype$Labels =='TKW'), BiggsToAugment),]
-# Cool now tweak the duration by 25% of the duration
-
-# Function to generate random offset directly within mutate
-DataAugment <- DataAugment %>%
-  mutate(
-    random_offset = Duration * runif(n(), 0.10, 0.25) * ifelse(runif(n()) > 0.5, 1, -1),
-  )
-
-DataAugment$FileBeginSec = DataAugment$FileBeginSec+DataAugment$random_offset 
-DataAugment$FileEndSec = DataAugment$FileBeginSec+DataAugment$Duration
-DataAugment= DataAugment[,colnames(DataAugment) %in% colnames(allAnnoEcotype)]
-
-allAnnoEcotype = rbind(allAnnoEcotype, DataAugment)
-labelCounts = table(allAnnoEcotype$Labels)
-
-# Do the same for offshores and NRKW
-nrkwToAugment = labelCounts[6]-labelCounts[3]
-
-DataAugment = allAnnoEcotype[sample(which(allAnnoEcotype$Labels =='NRKW'), 
-                                    nrkwToAugment, replace = TRUE),]
-
-# Cool now tweak the duration by 25% of the duration
-
-# Function to generate random offset directly within mutate
-DataAugment <- DataAugment %>%
-  mutate(
-    random_offset = Duration * runif(n(), 0.10, 0.25) * ifelse(runif(n()) > 0.5, 1, -1),
-  )
-
-DataAugment$FileBeginSec = DataAugment$FileBeginSec+DataAugment$random_offset 
-DataAugment$FileEndSec = DataAugment$FileBeginSec+DataAugment$Duration
-DataAugment= DataAugment[,colnames(DataAugment) %in% colnames(allAnnoEcotype)]
-
-allAnnoEcotype = rbind(allAnnoEcotype, DataAugment)
-labelCounts = table(allAnnoEcotype$Labels)
+# Filter out Malahat which will be used for evaluation
+allAnnoEcotype <- allAnnoEcotype %>% filter(Provider != "JASCO_Malahat")
 
 
-# Do the same for offshores
-okwToAugment = labelCounts[6]-labelCounts[4]
+# Balance Data via Augmentation
+augment_data <- function(data, target_label, ref_label) {
+  label_counts <- table(data$Labels)
+  to_augment <- label_counts[ref_label] - label_counts[target_label]
+  
+  if (to_augment > 0) {
+    augment <- data %>% filter(Labels == target_label) %>%
+      sample_n(to_augment, replace = TRUE) %>%
+      mutate(
+        random_offset = Duration * runif(n(), 0.10, 0.25) * ifelse(runif(n()) >
+                                                                     0.5, 1, -1),
+        FileBeginSec = FileBeginSec + random_offset,
+        FileEndSec = FileBeginSec + Duration
+      )
+    return(bind_rows(data, augment))
+  }
+  return(data)
+}
 
-DataAugment = allAnnoEcotype[sample(which(allAnnoEcotype$Labels =='OKW'), 
-                                    okwToAugment, replace = TRUE),]
+# Balance the ecotypes
+allAnnoEcotype <- augment_data(allAnnoEcotype, "TKW", "RKW")
+allAnnoEcotype <- augment_data(allAnnoEcotype, "OKW", "RKW")
 
-# Cool now tweak the duration by 25% of the duration
+# Train/Test Split
 
-# Function to generate random offset directly within mutate
-DataAugment <- DataAugment %>%
-  mutate(
-    random_offset = Duration * runif(n(), 0.10, 0.25) * ifelse(runif(n()) > 0.5, 1, -1),
-  )
+# Group data by Deployment and Date
+allAnnoEcotype <- allAnnoEcotype %>%
+  group_by(Dep, Date) %>%
+  mutate(GroupID = cur_group_id()) %>%
+  ungroup()
 
-DataAugment$FileBeginSec = DataAugment$FileBeginSec+DataAugment$random_offset 
-DataAugment$FileEndSec = DataAugment$FileBeginSec+DataAugment$Duration
-DataAugment= DataAugment[,colnames(DataAugment) %in% colnames(allAnnoEcotype)]
+# Stratify Train/Test Split by Labels
+set.seed(123)
 
-allAnnoEcotype = rbind(allAnnoEcotype, DataAugment)
-labelCounts = table(allAnnoEcotype$Labels)
+# Create a stratified partition of 80% for training
+train_indices <- createDataPartition(allAnnoEcotype$Labels, p = 0.8, list = FALSE)
+train <- allAnnoEcotype[train_indices, ] %>%
+  mutate(traintest = "Train")
+test <- allAnnoEcotype[-train_indices, ] %>%
+  mutate(traintest = "Test")
 
+# Verify Split
+table(train$Labels)  # Check label balance in train
+table(test$Labels)   # Check label balance in test
 
-# Create an 80/20 split across all deployments and labels
-library(caret)
-df_subset <- allAnnoEcotype[, c("Labels", "Dataset")]
-
-df_subset$classspecies <- factor(df_subset$Labels)
-
-# Check levels of 'classspecies' and 'deployment'
-levels(df_subset$Labels)
-df_subset$Dataset = as.factor(df_subset$Dataset)
-levels(df_subset$Dataset)
-
-set.seed(123)  # Set seed for reproducibility
-
-split <- createDataPartition(y = df_subset$classspecies, p = 0.8, list = FALSE, times = 1)
-
-train <- df_subset[split, ]
-test <- df_subset[-split, ]
-
-# Get the row indices from allAnnoEcotype based on allAnnoEcotype split
-train_indices <- rownames(train)
-test_indices <- rownames(test)
-
-# Subset original dataframe using indices
-train <- allAnnoEcotype[train_indices, ]
-test <- allAnnoEcotype[test_indices, ]
-train$traintest ='Train'
-test$traintest ='Test'
-
-
+# Export train test sets
 write.csv(subset(train, traintest=='Train'), row.names = FALSE,
           file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTrain3.csv')
 
 write.csv(subset(test, traintest=='Test'),  row.names = FALSE,
           file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\EcotypeTest3.csv')
-
-
-
-
-# Malahat validation
-JASCO_malahatSub$traintest = 'Train'
-write.csv(JASCO_malahatSub,row.names = FALSE,'C:/Users/kaity/Documents/GitHub/Ecotype/Malahat2.csv')
-
-
-
-
 
 
 
