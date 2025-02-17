@@ -1,85 +1,22 @@
-# Collate annotations for DCLDE 2026 data
-
-rm(list =ls())
-library(lubridate)
-library(dplyr)
-
-source('C:/Users/kaity/Documents/GitHub/DCLDE2026/TestFx.R')
-# Data to pretty
-# 
-# 1) Ocean Networks Canada 
-# 2) Viers
-# 3) DFO Cetacean Research Program (Pilkington)
-# 4) DFO Whale Detection and Localization (Yerk)
-# 5) SMRU
-# 6) VPFA
-# 7) Scripps
-# 8) UAF
-
-############################################################################
-# Final output column names
-
-colOut = c('Soundfile','Dep','LowFreqHz','HighFreqHz','FileEndSec', 'UTC',
-           'FileBeginSec','ClassSpecies','KW','KW_certain','Ecotype', 'Provider',
-           'AnnotationLevel', 'FilePath', 'FileOk')
-
-ClassSpeciesList = c('KW', 'HW', 'AB', 'UndBio')
-AnnotationLevelList = c('File', 'Detection', 'Call')
-EcotypeList = c('SRKW', 'TKW', 'OKW', 'NRKW', 'SAR')
-# For the class species, options are: KW, HW, AB, and UndBio
-# Killer whale, humpback whale, abiotic, and unknown Bio which includes 
-# Other dolphin acoustically active species ranging from fin whales, to 
-# white beaked dolphins to seagulls
-
-###############################################################################
-# 1) ONC- data from globus
-
-
-# Jasper, April, and Jenn have all annotated thse files.
-ONC_anno = read.csv('E:/DCLDE/ONC/Annotations/BarkleyCanyonAnnotations_Public_Final_cleaned.csv')
-
-
-colnames(ONC_anno)[8]<-'origEcotype'
-
+Q
 
 ONC_anno$ClassSpecies = ONC_anno$Species
 ONC_anno$KW_certain = NA
 ONC_anno$ClassSpecies[grepl("\\|", ONC_anno$Species)]= 'UndBio'
 ONC_anno$ClassSpecies[grepl("Mn", ONC_anno$Species)]= 'HW'
 ONC_anno$ClassSpecies[grepl("Oo", ONC_anno$Species)]= 'KW'
-ONC_anno$ClassSpecies[grepl("\\|Oo", ONC_anno$Species)]= 'KW'
-
-ONC_anno$ClassSpecies[ONC_anno$Species %in% c('BA', 'Bp', 'MY','OD', 'DE',
-                                              'UN', 'NN', 'Pm', 'Bm','Gg','CE',
-                                              'AN', 'Lo')]= 'UndBio'
 
 
-# Set clicks and buzzes to undbio
-# ONC_anno$ClassSpecies[ONC_anno$ClassSpecies =='KW' & 
-#                         ONC_anno$Call.Type %in% c('BZ', 'CK')]= 'UndBio'
 
 # Add Ecotype 
-ONC_anno$Ecotype<-NA
 ONC_anno$Ecotype[ONC_anno$origEcotype == 'SRKW'] ='SRKW'
 ONC_anno$Ecotype[ONC_anno$origEcotype == 'TKW'] ='TKW'
 ONC_anno$Ecotype[ONC_anno$origEcotype == 'OKW'] ='OKW'
+ONC_anno$Ecotype[ONC_anno$origEcotype == 'BKW'] ='TKW'
 
 # Set the ecotype to NA
 ONC_anno$Ecotype[ONC_anno$ClassSpecies== 'UndBio']= NA
-
-
 ONC_anno$KW = ifelse(ONC_anno$ClassSpecies=='KW',1,0)
-
-# Killer whales that were in combination with any other species are low confidence
-ONC_anno$KW_certain[grepl("\\|Oo", ONC_anno$Species) & ONC_anno$ClassSpecies== 'KW']= 0
-ONC_anno$KW_certain[ONC_anno$Species == 'Oo']= 1
-
-
-ONC_anno$KW_certain =NA 
-ONC_anno$KW_certain[ONC_anno$KW ==1 & 
-                        grepl("\\|", ONC_anno$KW) == FALSE]= 1
-ONC_anno$KW_certain[ONC_anno$KW ==1 & 
-                        grepl("\\|", ONC_anno$Species) == TRUE] = 0
 
 
 ONC_anno$FileBeginSec= as.numeric(ONC_anno$Left.time..sec.)
@@ -172,7 +109,7 @@ ONC_anno$UTC[badidx] = as.POSIXct('20141004T102246',
   seconds(0.170)+ONC_anno$FileBeginSec[badidx]
 
 
-dayFolderPath = 'E:\\DCLDE\\ONC\\Audio\\BarkleyCanyon'
+dayFolderPath = 'E:/DCLDE/ONC/Audio/BarkleyCanyon'
 ONC_anno$FilePath = file.path(dayFolderPath,
                               ONC_anno$Soundfile)
 ONC_anno$AnnotationLevel = 'call'
@@ -279,8 +216,8 @@ DFO_CRP <- DFO_CRP %>%
   mutate(overlap = lead(UTC) <= lag(end_time, default = first(end_time)))
 
 
-dayFolderPath_WV = 'E:\\DCLDE\\DFO_CRP\\Audio\\WVanIsl'
-dayFolderPath_NBC = 'E:\\DCLDE\\DFO_CRP\\Audio\\NorthBc'
+dayFolderPath_WV = 'E:/DCLDE/DFO_CRP/Audio/WVanIsl'
+dayFolderPath_NBC = 'E:/DCLDE/DFO_CRP/Audio/NorthBc'
 
 DFO_CRP$FilePath = 'blarg'
 
@@ -324,17 +261,17 @@ DFO_CRP = DFO_CRP[, c(colOut)]
 # 
 # # List which files are not in annotations list
 # audio.files = data.frame(
-#   filename = list.files('E:\\DCLDE\\DFO_CRP\\Audio\\',
+#   filename = list.files('E:/DCLDE/DFO_CRP/Audio/',
 #            pattern ='.flac', recursive = TRUE, include.dirs = TRUE))
 # 
 # 
 
 # audio.files$Soundfile =basename(audio.files$filename)
-# audio.files$fullfile = paste0('E:\\DCLDE\\DFO_CRP\\Audio\\', audio.files$filename)
+# audio.files$fullfile = paste0('E:/DCLDE/DFO_CRP/Audio/', audio.files$filename)
 # audio.files$keep = audio.files$Soundfile %in% DFO_CRP$Soundfile 
 # 
 # #Move unnecesary audio to bin
-# audio.files$newLoc = file.path('E:\\CRP_Bin', audio.files$Soundfile)
+# audio.files$newLoc = file.path('E:/CRP_Bin', audio.files$Soundfile)
 # 
 # library(filesstrings)
 # for(ii in 9991:nrow(audio.files)){
@@ -351,7 +288,7 @@ DFO_CRP = DFO_CRP[, c(colOut)]
 ############################################################################
 
 # Get a list of files matching the pattern 'annot_Malahat'
-file_list <- list.files(path = 'E:\\DCLDE\\DFO_WDLP/Annotations/merged_annotations/', 
+file_list <- list.files(path = 'E:/DCLDE/DFO_WDLP/Annotations/merged_annotations/', 
                         pattern = '*csv', full.names = TRUE)
 
 
@@ -409,18 +346,19 @@ DFO_WDLP <- DFO_WDLP %>%
 
 # Add a new column for deployment folder
 DFO_WDLP$DepFolder = DFO_WDLP$Dep
-levels(DFO_WDLP$DepFolder)<-c('CMN_2022-03-08_20220629_ST_utc',
-                              'SOGN_20210905_20211129_AMAR_utc',
-                              'SOGN_20210905_20211129_AMAR_utc',
-                              'SOGS_20210904_20211118_AMAR_utc',
-                              'SOGS_20210904_20211118_AMAR_utc',
-                              'SWAN_20211113_20220110_AMAR_utc')
+levels(DFO_WDLP$DepFolder)<-c('CarmanahPt',
+                              'StrGeoN1',
+                              'StrGeoN1',
+                              'StrGeoS1',
+                              'StrGeoS1',
+                              'SwanChan')
 
 # Filepaths
-dayFolderPath = 'E:\\DCLDE\\DFO_WDLP\\Audio'
+dayFolderPath = 'E:/DCLDE/DFO_WDLP/Audio'
 
 DFO_WDLP$FilePath = 
-  file.path(dayFolderPath, DFO_WDLP$DepFolder, 
+  file.path(dayFolderPath, 
+            DFO_WDLP$DepFolder, 
             DFO_WDLP$Soundfile)
 
 
@@ -442,7 +380,7 @@ rm(list=c('dayFolderPath','dayFolderPath_NBC','dayFolderPath_WV','NBCidx','WVIid
 ###############################################################################
 # Orca Sound Data
 
-OrcaSound = read.csv('E:\\DCLDE\\Orcasound/Annotations/ModifiedAnnotations.csv')
+OrcaSound = read.csv('E:/DCLDE/Orcasound/Annotations/ModifiedAnnotations.csv')
 OrcaSound$start_time_s = as.numeric(OrcaSound$start_time_s) 
 
 OrcaSound$DateTime <- with(OrcaSound, paste(date, pst_or_master_tape_identifier))
@@ -498,7 +436,7 @@ levels(OrcaSound$location)
 
 
 # Filepaths
-dayFolderPath = 'E:\\DCLDE\\OrcaSound\\Audio'
+dayFolderPath = 'E:/DCLDE/OrcaSound/Audio'
 OrcaSound$FilePath = 
   file.path(dayFolderPath,OrcaSound$Dep, OrcaSound$Soundfile)
 
@@ -525,7 +463,7 @@ runTests(OrcaSound, EcotypeList, ClassSpeciesList)
 
 
 # multiple selection tables
-file_list <- list.files(path = 'E:\\DCLDE\\SIMRES/Annotations/', 
+file_list <- list.files(path = 'E:/DCLDE/SIMRES/Annotations/', 
                         pattern = '*txt', full.names = TRUE)
 
 
@@ -574,7 +512,7 @@ SIMRES$AnnotationLevel = 'Call'
 
 
 # Filepaths- wackadoodle for SIMRES
-dayFolderPath = 'E:\\DCLDE\\SIMRES\\Audio\\'
+dayFolderPath = 'E:/DCLDE/SIMRES/Audio/'
 
 # 1. List all files in the target directory
 allAudio <- list.files(path = dayFolderPath, pattern = "\\.flac$", 
@@ -608,7 +546,7 @@ rm(list= c('file_list', 'dayFolderPath'))
 ############################################################################
 
 # Strait fo Georgia
-VPFA_SoG<- read.csv('E:\\DCLDE/VFPA/Annotations/annot_RB_man_det.csv')
+VPFA_SoG<- read.csv('E:/DCLDE/VFPA/Annotations/annot_RB_man_det.csv')
 
 VPFA_SoG <- VPFA_SoG %>%
   mutate(
@@ -637,6 +575,8 @@ VPFA_SoG$KW_certain= NA
 VPFA_SoG$KW_certain[VPFA_SoG$KW==1] =1
 VPFA_SoG$KW_certain[VPFA_SoG$KW==1 & 
                       grepl("\\?", VPFA_SoG$sound_id_species)]<-0
+VPFA_SoG$KW_certain[VPFA_SoG$sound_id_species %in% c('KW?', "HW/KW?",
+                                                     'KW/PWSD?')]<-0
 
 
 
@@ -671,7 +611,7 @@ VPFA_SoG <- VPFA_SoG %>%
 
 # List which files are not in annotations list
 audio.files = data.frame(
-  filename = list.files('E:\\DCLDE\\VFPA/Audio/StraitofGeorgia_Globus-RobertsBank/',
+  filename = list.files('E:/DCLDE/VFPA/Audio/StraitofGeorgia_Globus-RobertsBank/',
                         pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
 audio.files$Soundfile =basename(audio.files$filename)
 
@@ -686,7 +626,7 @@ hpf_df <- audio.files[grep("hpf", audio.files$filename, ignore.case = TRUE), ]
 
 
 # Day folder
-dayFolderPath = 'E:\\DCLDE\\VFPA/Audio/StraitofGeorgia_Globus-RobertsBank/'
+dayFolderPath = 'E:/DCLDE/VFPA/Audio/StraitofGeorgia_Globus-RobertsBank/'
 VPFA_SoG$FilePath = file.path(dayFolderPath,
                               VPFA_SoG$Soundfile)
 
@@ -714,7 +654,7 @@ runTests(VPFA_SoG, EcotypeList, ClassSpeciesList)
 
 
 # Boundary Pass
-VPFA_BoundaryPass<- read.csv('E:\\DCLDE\\VFPA/Annotations/annot_BP_man_det.csv')
+VPFA_BoundaryPass<- read.csv('E:/DCLDE/VFPA/Annotations/annot_BP_man_det.csv')
 VPFA_BoundaryPass <- VPFA_BoundaryPass %>%
   mutate(
     KW = as.numeric(grepl("KW", sound_id_species)),
@@ -780,7 +720,7 @@ VPFA_BoundaryPass$Provider = 'JASCO_VFPA'
 
 # List which files are not in annotations list
 audio.files = data.frame(
-  filename = list.files('E:\\DCLDE\\VFPA/BoundaryPass/',
+  filename = list.files('E:/DCLDE/VFPA/BoundaryPass/',
                         pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
 audio.files$Soundfile =basename(audio.files$filename)
 
@@ -797,7 +737,7 @@ if (all(VPFA_BoundaryPass$Soundfile %in% audio.files$Soundfile)){
 
 
 # Day folder
-dayFolderPath = 'E:\\DCLDE\\VFPA/Audio/BoundaryPass'
+dayFolderPath = 'E:/DCLDE/VFPA/Audio/BoundaryPass'
 VPFA_BoundaryPass$FilePath = file.path(dayFolderPath,
   VPFA_BoundaryPass$Soundfile)
 
@@ -822,7 +762,7 @@ runTests(VPFA_BoundaryPass, EcotypeList, ClassSpeciesList)
 
 
 # Haro Strait North
-VPFA_HaroNB<- read.csv('E:\\DCLDE\\VFPA/Annotations/annot_VFPA-HaroStrait-NB_SM_coarse.csv')
+VPFA_HaroNB<- read.csv('E:/DCLDE/VFPA/Annotations/annot_VFPA-HaroStrait-NB_SM_coarse.csv')
 VPFA_HaroNB <- VPFA_HaroNB %>%
   mutate(
     KW = as.numeric(grepl("KW", sound_id_species)),
@@ -878,7 +818,7 @@ VPFA_HaroNB$Provider = 'JASCO_VFPA'
 
 # List which files are not in annotations list
 audio.files = data.frame(
-  filename = list.files('E:\\DCLDE\\VFPA/Audio/VFPA-HaroStrait-NB/',
+  filename = list.files('E:/DCLDE/VFPA/Audio/VFPA-HaroStrait-NB/',
                         pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
 audio.files$Soundfile =basename(audio.files$filename)
 
@@ -894,7 +834,7 @@ if (all(VPFA_HaroNB$Soundfile %in% audio.files$Soundfile)){
 
 
 # Day folder
-dayFolderPath = 'E:\\DCLDE\\VFPA/Audio/VFPA-HaroStrait-NB/'
+dayFolderPath = 'E:/DCLDE/VFPA/Audio/VFPA-HaroStrait-NB/'
 VPFA_HaroNB$FilePath = file.path(dayFolderPath,
   VPFA_HaroNB$Soundfile)
 
@@ -917,7 +857,7 @@ runTests(VPFA_HaroNB, EcotypeList, ClassSpeciesList)
 ############################################################################
 
 # Haro Strait South
-VPFA_HaroSB<- read.csv('E:\\DCLDE\\VFPA/Annotations/annot_VFPA-HaroStrait-SB_SM_coarse.csv')
+VPFA_HaroSB<- read.csv('E:/DCLDE/VFPA/Annotations/annot_VFPA-HaroStrait-SB_SM_coarse.csv')
 VPFA_HaroSB <- VPFA_HaroSB %>%
   mutate(
     KW = as.numeric(grepl("KW", sound_id_species)),
@@ -978,7 +918,7 @@ VPFA_HaroSB$Provider = 'JASCO_VFPA'
 
 # List which files are not in annotations list
 audio.files = data.frame(
-  filename = list.files('E:\\DCLDE\\VFPA/Audio/VFPA-HaroStrait-SB/',
+  filename = list.files('E:/DCLDE/VFPA/Audio/VFPA-HaroStrait-SB/',
                         pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
 audio.files$Soundfile =basename(audio.files$filename)
 
@@ -992,7 +932,7 @@ if (all(VPFA_HaroSB$Soundfile %in% audio.files$Soundfile)){
 }
 
 # Day folder
-dayFolderPath = 'E:\\DCLDE\\VFPA\\Audio/VFPA-HaroStrait-SB/'
+dayFolderPath = 'E:/DCLDE/VFPA/Audio/VFPA-HaroStrait-SB/'
 VPFA_HaroSB$FilePath = file.path(dayFolderPath, 
   VPFA_HaroSB$Soundfile)
 
@@ -1016,7 +956,7 @@ runTests(VPFA_HaroSB, EcotypeList, ClassSpeciesList)
 
 
 # Get a list of files matching the pattern 'annot_Malahat'
-file_list <- list.files(path = 'E:\\DCLDE\\Scripps\\Annotations', 
+file_list <- list.files(path = 'E:/DCLDE/Scripps/Annotations', 
                         pattern = '*txt', full.names = TRUE)
 
 
@@ -1079,8 +1019,8 @@ runTests(scripps, EcotypeList, ClassSpeciesList)
 #############################################################################
 
 
-SMRU_SRKW<- read.csv('E:\\DCLDE\\SMRU/annotations/annot_LimeKiln-Encounters_man_det.csv')
-SMRU_HW<- read.csv('E:\\DCLDE\\SMRU/annotations/annot_LimeKiln-Humpback_man_det.csv')
+SMRU_SRKW<- read.csv('E:/DCLDE/SMRU/annotations/annot_LimeKiln-Encounters_man_det.csv')
+SMRU_HW<- read.csv('E:/DCLDE/SMRU/annotations/annot_LimeKiln-Humpback_man_det.csv')
 
 SMRU <- rbind(SMRU_HW, SMRU_SRKW)
 
@@ -1151,14 +1091,14 @@ SMRU <- SMRU %>%
 
 # List which files are not in annotations list
 audio.files = data.frame(
-  filename = list.files('E:\\DCLDE\\SMRU/Audio/Lime Kiln/',
+  filename = list.files('E:/DCLDE/SMRU/Audio/Lime Kiln/',
                         pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
 audio.files$Soundfile =basename(audio.files$filename)
 
 
 
 # Day folder
-dayFolderPath = 'E:\\DCLDE\\SMRU/Audio/Lime Kiln/'
+dayFolderPath = 'E:/DCLDE/SMRU/Audio/Lime Kiln/'
 SMRU$FilePath = file.path(dayFolderPath,
                           SMRU$Soundfile)
 
@@ -1179,7 +1119,6 @@ runTests(SMRU, EcotypeList, ClassSpeciesList)
 ##############################################################################
 #JASCO- Malahat
 ###############################################################################
-
 # Get a list of files matching the pattern 'annot_Malahat'
 file_list <- list.files(path = 'E:/DCLDE/Malahat_JASCO/Annotations/',
                         pattern = 'annot_Malahat', full.names = TRUE)
@@ -1201,6 +1140,7 @@ JASCO_malahat <- JASCO_malahat %>%
   mutate(
     UTC = as.POSIXct(sub(".*(\\d{8}T\\d{6}Z).*", "\\1", filename),
                      format = "%Y%m%dT%H%M%S", tz= 'UTC'))
+
 JASCO_malahat$UTC = JASCO_malahat$UTC+
   seconds(as.numeric(JASCO_malahat$start))
 
@@ -1221,9 +1161,6 @@ JASCO_malahat$KW_certain[JASCO_malahat$sound_id_species %in% c("HW/KW?",
 colnames(JASCO_malahat)[c(5,6,3,4,1)]<-c('LowFreqHz','HighFreqHz','FileBeginSec',
                                          'FileEndSec', 'Soundfile')
 
-
-
-
 JASCO_malahat$AnnotationLevel = 'Call'
 
 JASCO_malahat$dur = JASCO_malahat$FileEndSec-JASCO_malahat$FileBeginSec
@@ -1237,9 +1174,9 @@ JASCO_malahat$Provider = 'JASCO_Malahat'
 levels(JASCO_malahat$Dep)<-c('STN3', 'STN4', 'STN5', 'STN6')
 
 # Filepaths
-dayFolderPath = 'E:\\Malahat'
+dayFolderPath = 'E:/Malahat'
 JASCO_malahat$FilePath =
-  file.path(dayFolderPath, JASCO_malahat$Dep,JASCO_malahat$path)
+  file.path('E:/Malahat', JASCO_malahat$Dep,JASCO_malahat$Soundfile)
 
 JASCO_malahat$FileOk  = file.exists(JASCO_malahat$FilePath)
 
@@ -1248,21 +1185,22 @@ JASCO_malahat$FileOk  = file.exists(JASCO_malahat$FilePath)
 if (all(JASCO_malahat$FileOk)){
   print('All data present for annotations')}else{print('Missing data')}
 
+# Nix annotations without audio files
+""
+JASCO_malahat= JASCO_malahat[JASCO_malahat$FileOk==TRUE,]
+
 runTests(JASCO_malahat, EcotypeList, ClassSpeciesList)
 
 JASCO_malahat = JASCO_malahat[,c(colOut)]
 
 
-# Nix annotations without audio files
-""
-JASCO_malahat= JASCO_malahat[JASCO_malahat$FileOk==TRUE,]
 
 
 
 
 # # List which files are not in annotations list
 #  audio.files = data.frame(
-#    filename = list.files('E:\\DCLDE2026\\JASCO/Audio/',
+#    filename = list.files('E:/DCLDE2026/JASCO/Audio/',
 #             pattern ='.wav', recursive = TRUE, include.dirs = TRUE))
 #  audio.files$Soundfile =basename(audio.files$filename)
 # # 
@@ -1285,13 +1223,13 @@ JASCO_malahat= JASCO_malahat[JASCO_malahat$FileOk==TRUE,]
 #organize at least into individual hydrophons or field locations
 
 # New Audio Location (where to move the organized files too)
-new_root ='E:\\DCLDE\\UAF\\Audio'
+new_root ='E:/DCLDE/UAF/Audio'
 
 # Annotations location (already moved all the annotations here)
-annot_root =  'E:\\DCLDE\\UAF\\Annotations\\'
+annot_root =  'E:/DCLDE/UAF/Annotations/'
 
 # Load the deployment info
-UAF_depInfo = read.csv('E:\\DCLDE\\UAF\\Meta\\Myers_DCLDE_2026_files.csv')
+UAF_depInfo = read.csv('E:/DCLDE/UAF/Meta/Myers_DCLDE_2026_files.csv')
 
 
 # Get a list of annotation files
@@ -1347,7 +1285,7 @@ UAF$AudioFile <- gsub("\\.Table", "", UAF$AudioFile)
 UAF = merge(UAF, UAF_depInfo, by.x = 'AudioFile',
             by.y='FileName', all.x=TRUE)
 
-UAF$FilePath<- file.path('E:\\DCLDE\\UAF\\Audio', UAF$Location, UAF$AudioFile)
+UAF$FilePath<- file.path('E:/DCLDE/UAF/Audio', UAF$Location, UAF$AudioFile)
 
 
 # UTC is the UTC plus the file offset
@@ -1430,337 +1368,12 @@ runTests(UAF, EcotypeList, ClassSpeciesList)
 UAF= UAF[,colOut]
 
 
-
 ###########################################################################
 allAnno = rbind(DFO_CRP, DFO_WDLP, OrcaSound, ONC_anno, scripps, SIMRES,
                 VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG, SMRU,
                 UAF,JASCO_malahat)
 
 allAnno = rbind(DFO_CRP, DFO_WDLP, OrcaSound, ONC_anno, scripps, SIMRES,
-                VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG, SMRU, UAF)
-
-colnames(allAnno)[2]<-'Dataset'
-
-
-# double check all audio files are there
-allAnno$FileOk  = file.exists(allAnno$FilePath)
-
-
-
-
-# Fun fun, some of the annotations have negative durations... cull them
-allAnno$Duration = allAnno$FileEndSec-allAnno$FileBeginSec
-allAnno$CenterTime = allAnno$FileBeginSec+allAnno$Duration/2
-allAnno = subset(allAnno, Duration>0.1)
-
-
-# Run the checks for allowable values
-AnnotationLevelList
-ClassSpeciesList
-EcotypeList
-
-unique(allAnno$KW)
-unique(allAnno$ClassSpecies)
-unique(allAnno$Ecotype)
-unique(allAnno$Provider)
-
-
-# overall annotations
-table(allAnno$ClassSpecies)
-
-# Pull out the killer whale data
-KW_data = subset(allAnno, KW ==1)
-
-table(KW_data$Ecotype)
-
-#########################################################################
-# List of unused audio files
-############################################################################
-
-
-# List which files are not in annotations list
-audio.files = data.frame(
-  filename = list.files('E:\\DCLDE\\',
-                        pattern ='*.wav', 
-                        recursive = TRUE, 
-                        include.dirs = FALSE))
-
-audio.files = rbind(audio.files,
-                    data.frame(
-                      filename = list.files('E:\\DCLDE\\', 
-                                            pattern ='*.flac', 
-                                            recursive = TRUE, 
-                                            include.dirs = FALSE)))
-
-audio.files$soundfile = basename(audio.files$filename)
-audio.files$indata = audio.files$soundfile %in% allAnno$Soundfile
-audio.files$dir = dirname(audio.files$filename)
-
-# Move the files
-
-noAnnotations = audio.files[audio.files$indata ==FALSE,]
-noAnnotations$newLoc = paste0('E:/DCLDE_AUIDOBIN/', noAnnotations$dir)
-
-library(filesstrings)
-
-for(ii in 2:nrow(noAnnotations)){
-  newDir =noAnnotations$newLoc[ii]
-  
-  if(!dir.exists(newDir)){
-    dir.create(newDir, recursive = TRUE)
-  }
-  
-  file.move(paste0('E:/DCLDE/',noAnnotations$filename[ii]), 
-            paste0(newDir, '/',noAnnotations$soundfile[ii]))  
-}
-
-
-
-
-#############################################################################
-#  Train test set
-#############################################################################
-
-
-library(dplyr)
-library(lubridate)
-library(stringr)
-library(caret)
-
-# Example input data
-# Replace this with your actual `allAnnoEcotype` data
-set.seed(123)
-
-
-# Fun fun, some of the annotations have negative durations... cull them
-allAnno$Duration = allAnno$FileEndSec-allAnno$FileBeginSec
-allAnno$CenterTime = allAnno$FileBeginSec+allAnno$Duration/2
-allAnno = subset(allAnno, Duration>0.1)
-
-
-
-# Only KW certain and other classes
-allAnnoEcotype = subset(allAnno, KW_certain %in% c(1, NA))
-
-# Create the proper labels
-# Use the ecotype where available
-allAnnoEcotype$Labels = as.character(allAnnoEcotype$Ecotype)
-
-# Use ClassSpecies where not available
-allAnnoEcotype$Labels[is.na(allAnnoEcotype$Ecotype)] =
-  allAnnoEcotype$ClassSpecies[is.na(allAnnoEcotype$Ecotype)] 
-allAnnoEcotype = subset(allAnnoEcotype, Labels != 'KW')
-allAnnoEcotype$Labels = as.factor(allAnnoEcotype$Labels)
-
-# Change levels to AB, HW, RKW, TKW, OKW, UndBio
-levels(allAnnoEcotype$Labels)<-c('AB', 'HW', 'RKW', 'OKW', 'RKW', 'RKW', 
-                                 'TKW', 'UndBio')
-
-# Numeric labels for training
-allAnnoEcotype$label = as.numeric(as.factor(allAnnoEcotype$Labels))-1
-
-
-# Add a `Date` column to group by UTC date
-allAnnoEcotype <- allAnnoEcotype %>% mutate(Date = as.Date(UTC))
-
-# Separate Malahat data
-malahat_data <- allAnnoEcotype %>% filter(Provider == "JASCO_Malahat")
-
-# Filter out Malahat from the main dataset
-allAnnoEcotype <- allAnnoEcotype %>% filter(Provider != "JASCO_Malahat")
-
-
-# Balance Data via Augmentation
-augment_data <- function(data, target_label, ref_label) {
-  label_counts <- table(data$Labels)
-  to_augment <- label_counts[ref_label] - label_counts[target_label]
-  
-  if (to_augment > 0) {
-    augment <- data %>% filter(Labels == target_label) %>%
-      sample_n(to_augment, replace = TRUE) %>%
-      mutate(
-        random_offset = Duration * runif(n(), 0.10, 0.25) * ifelse(runif(n()) >
-                                                                     0.5, 1, -1),
-        FileBeginSec = FileBeginSec + random_offset,
-        FileEndSec = FileBeginSec + Duration
-      )
-    return(bind_rows(data, augment))
-  }
-  return(data)
-}
-
-# Balance the ecotypes
-allAnnoEcotype <- augment_data(allAnnoEcotype, "TKW", "RKW")
-allAnnoEcotype <- augment_data(allAnnoEcotype, "OKW", "RKW")
-
-# Train/Test Split
-
-# Group data by Deployment and Date
-allAnnoEcotype <- allAnnoEcotype %>%
-  group_by(Dep, Date) %>%
-  mutate(GroupID = cur_group_id()) %>%
-  ungroup()
-
-# Stratify Train/Test Split by Labels
-set.seed(123)
-
-# Create a stratified partition of 80% for training
-train_indices <- createDataPartition(allAnnoEcotype$Labels, p = 0.8, list = FALSE)
-train <- allAnnoEcotype[train_indices, ] %>%
-  mutate(traintest = "Train")
-test <- allAnnoEcotype[-train_indices, ] %>%
-  mutate(traintest = "Test")
-
-# Verify Split
-table(train$Labels)  # Check label balance in train
-table(test$Labels)   # Check label balance in test
-
-# Export train test sets
-write.csv(train, row.names = FALSE,
-          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\RTO_train.csv')
-
-write.csv(test,  row.names = FALSE,
-          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\RTO_test.csv')
-
-write.csv(malahat_data, row.names = FALSE, 
-          file = 'C:\\Users\\kaity\\Documents\\GitHub\\Ecotype\\RTO_malahat.csv')
-
-
-############################################################################
-# Plot Figure
-############################################################################
-
-library(ggOceanMaps)
-library(mapdata)
-library(sf)
-library(tidyr)
-library(rnaturalearth)
-library(rnaturalearthdata)
-library(ggspatial)
-
-# Deployment Locations
-depLocs = read.csv('C:/Users/kaity/Documents/GitHub/DCLDE2026/Documentation/DepLocs.csv',
-                   header = TRUE)
-colnames(depLocs)[c(4,5)]<- c('lat', 'lon')
-
-# plotting will crash otherwise
-sf_use_s2(FALSE) 
-
-p<-basemap(limits= c(-130, -122.5, 47, 52.2), bathymetry = TRUE,
-        bathy.style = "rcb", rotate = TRUE)+
-  ggspatial::annotation_north_arrow(location = "tr", which_north = "true") +
-  guides(fill="none")
-  
-p= p+ ggspatial::geom_spatial_point(data = depLocs[depLocs$Exact==0,], 
-                                aes(x = lon, y = lat), fill = "red",
-                                size =50, alpha= 0.25, pch=21)+
-    ggspatial::geom_spatial_point(data = depLocs[depLocs$Exact==1,], 
-                                  aes(x = lon, y = lat), pch=21, fill = "red",
-                                  size =5, alpha= 1)+
-    xlab('Longitude')+ylab('Latitude')+
-    #theme(plot.margin = unit(c(0.3,0.2,0,2), 'lines'))+
-    theme(axis.text=element_text(size=20),
-          axis.title=element_text(size=24,face="bold"))
-
-    
-
-
-
-ragg::agg_png("DataMap.png", 
-               width = 40, 
-               height = 30, 
-               units = "cm", res = 250)
-print(p)
-dev.off()
-
-
-
-
-
-############################################################################
-# Histogram of months
-library(ggplot2)
-
-ggplot(data = allAnno[!is.na(allAnno$ClassSpecies),], 
-       aes(x= month(UTC)))+
-  geom_histogram(aes(fill  = as.factor(ClassSpecies)), bins = 12)+
-  facet_wrap(~Provider, scales = 'free_y')+
-  scale_fill_discrete(name = "KW Annotations")+
-  theme_bw()+
-  xlab('Month')+
-  ylab('Annotations')
-
-
-# Convert month numbers to month names
-KW_data$Month = month(KW_data$UTC)
-KW_data$Month <- month.name[KW_data$Month]
-
-ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'TKW'))
-                       , aes(x= month(UTC)))+
-  geom_histogram(aes(fill  = as.factor(Ecotype)))+
-  facet_wrap(~Provider, scales = 'free_y')+
-  scale_fill_discrete(name = "KW Annotations")+
-  theme_bw()+
-  xlab('Month')
-
-KW_data$Month <- month(ymd(KW_data$UTC))  # Extract month number from the UTC date
-
-
-
-
-ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'TKW')),
-       aes(x = Month)) +  # Use Month instead of month(UTC)
-  geom_histogram(aes(fill = Ecotype)) +
-  facet_wrap(~Provider, scales = 'free_y') +
-  scale_fill_discrete(name = "KW Annotations") +
-  theme_bw() +
-  xlab('Month')
-
-
-
-library(zoo)
-
-KW_data <- KW_data %>%
-  mutate(month = month(UTC))
-
-ggplot(data = subset(KW_data, Ecotype %in% c('NRKW', 'SRKW', 'OKW', 'TKW')),
-       aes(as.yearmon(UTC), fill=Ecotype)) + 
-  geom_bar(position = position_dodge(width  = 1/12),
-           fill= as.factor(Ecotype), 
-           binwidth=1/12, colour='black') + 
-  scale_x_yearmon()
-
-###########################################################################
-# Check each dataset to see which audio files have kw calls
-##########################################################################
-
-
-# Filepaths- wackadoodle for SIMRES -OK!
-dayFolderPath = 'E:\\DCLDE2026\\SIMRES\\Audio\\'
-SimresAudio <- list.files(path = dayFolderPath, pattern = "\\.flac$", 
-                       full.names = FALSE, recursive = TRUE)
-all(basename(SimresAudio) %in% SIMRES$Soundfile)
-
-# Podcast Data- More
-dayFolderPath = 'E:\\DCLDE2026\\OrcaSound\\Audio'
-OrcaSoundAudio = list.files(path = dayFolderPath, pattern = "\\.wav$", 
-                                full.names = FALSE, recursive = TRUE)
-which(!basename(OrcaSoundAudio) %in% OrcaSound$Soundfile)
-
-
-# Yurk - full deployment, too many files
-dayFolderPath = 'E:\\DCLDE2026\\DFO_WDLP\\Audio'
-YurkAudio = list.files(path = dayFolderPath, pattern = "\\.wav$", 
-                            full.names = FALSE, recursive = TRUE)
-all(basename(YurkAudio) %in% DFO_Yerk$Soundfile)
-
-
-
-# JASCO Malahat
-file_list <- list.files(path = 'E:/DCLDE2026/JASCO/Audio/', 
-                        pattern = '\\.wav$', recursive = TRUE)
-
-length(which(basename(file_list) %in% JASCO_malahat$Soundfile))
-
-
+                VPFA_BoundaryPass, VPFA_HaroNB, VPFA_HaroSB, VPFA_SoG, SMRU,
+                UAF)
 
